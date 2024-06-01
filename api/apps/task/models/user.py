@@ -44,6 +44,11 @@ class TaskProfile(models.Model):
         blank=True,
         null=True
     )
+    deadline = models.DateField(
+        _('deadline'),
+        blank=True,
+        null=True
+    )
     completed = models.BooleanField(
         _('Completed'),
         default=False

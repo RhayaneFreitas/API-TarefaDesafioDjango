@@ -11,6 +11,10 @@ from django.urls import(
     path,
     include
 )
+from api.apps.task.views.user import (
+    ExportData,
+    ExportFilters
+)
 
 from rest_framework.routers import DefaultRouter
 route = routers.DefaultRouter()
@@ -38,28 +42,47 @@ urlpatterns = [
     path('',
          include(route.urls)
     ),
-    path('export/json/',
-         user.ExportJson.as_view(
+    # path('export/<slug:slug>/',
+    #      user.ExportFilters.as_view(
              
-         ),
-         name='export_tasks'
+    #      ),
+    #      name='export_filters'
+    # ),
+    path('export_data/',
+         ExportData.as_view(),
+         name='exportdata'
     ),
-    path('export/txt/',
-         user.ExportTxt.as_view(
-             
-         ),
-         name='task-export-txt'
-    ),
-    path('<int:pk>/', user.TaskView.as_view(
-        
-        ),
-    ),
-    path('export/filters/',
-         user.ExportFilters.as_view(
-             
-         ),
-         name='export_filters'
-    ),
+    path('report/<str:report_type>/',
+         ExportFilters.as_view(),
+         name='task-report')
 ]
 
-# path('export_data/<int:pk>/<slug:slug>/',ExportData.as_view(), name='exportdata') > Transformaria em 1 só.
+
+"""Antes das Melhorias:
+
+1 - Método de Escrita com :
+path('export_data/<int:pk>/<slug:slug>/',ExportData.as_view(), name='exportdata') 
+
+2 - Melhoria no Método de Escrita e Junção Txt/Json em uma única Classe:
+
+    # path('export/json/',
+    #      user.ExportJson.as_view(
+             
+    #      ),
+    #      name='export_tasks'
+    # ),
+    # path('export/txt/',
+    #      user.ExportTxt.as_view(
+             
+    #      ),
+    #      name='task-export-txt'
+    # ),
+    # path('<int:pk>/', user.TaskView.as_view(
+        
+    #     ),
+    # ),
+
+
+
+
+"""

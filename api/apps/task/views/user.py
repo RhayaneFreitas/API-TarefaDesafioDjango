@@ -3,6 +3,10 @@ from rest_framework.response import Response
 from rest_framework.renderers import JSONRenderer
 from django.http import HttpResponse
 import json
+from datetime import (
+    datetime,
+    timedelta
+)
 from api.apps.task.serializers.user import (
     TasksSerializer,
     TaskResponsibleSerializer,
@@ -13,12 +17,12 @@ from api.apps.task.models import (
     
     )
 from api.apps.task.models import user
-from rest_framework.authentication import TokenAuthentication
+from rest_framework.authentication import TokenAuthentication #Udemy
 from rest_framework import generics
 from django.contrib.auth.models import (
     User as AuthUser,
-)
-import django_filters.rest_framework
+    )
+import django_filters.rest_framework # Filters
 from django_filters.rest_framework import DjangoFilterBackend
 
 # from api.apps.task.serializers import TasksSerializer
@@ -29,8 +33,15 @@ from rest_framework import (
     filters,
     )
 
-from django.db.models import Count
-from django.db.models import Q
+from django.db.models import (
+    Count,
+    Value,
+    F,
+    Q
+    )
+from django.db.models.functions import Concat
+from django.shortcuts import get_object_or_404
+
 
 class TaskView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -70,79 +81,142 @@ class TaskView(APIView):
         
         task.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-    
-class ExportJson(APIView):
+
+
+class ExportData(APIView):
     renderer_classes = [JSONRenderer]
-    
+
     def get(self, request):
         tasks = TaskProfile.objects.all()
-        serializer = TasksSerializer(tasks, many=True)
-        content = JSONRenderer().render(serializer.data)
-        # print(content)
-        # content_filters = []
-        # for item in content:
-        #     if item['']
-        response = HttpResponse(content, content_type='application/json')
-        response['Content-Disposition'] = 'attachment; filename="tasks.json"'
-        return response
-
-# class ExportFilters(APIView):
-#     renderer_classes = [JSONRenderer]
-    
-#     def get(self, request):
-#         responsibles = user.TaskResponsible.objects.all()
-#         # test = user.TaskProfile.objects.filter
-#         serializer_responsibles = TaskResponsibleSerializer(responsibles, many=True)
-#         content_responsibles = JSONRenderer().render(serializer_responsibles.data)
+        formato = request.GET.get('formato')
+        serializer = TasksSerializer(tasks,many=True)
+        formatos = {
+            "json": self.get_json,
+            "txt": self.get_txt
+        }
+        try:
+            content, content_type = formatos[formato](serializer)
+            response = HttpResponse(content, content_type=content_type)
+            response['Content-Disposition'] = f'attachment; filename="tasks.{formato}"'
+            
+            return response
         
-#         tasks = user.TaskProfile.objects.all()
-#         serializer_tasks = TasksSerializer(tasks, many=True)
-#         content_tasks = JSONRenderer().render(serializer_tasks.data)
-#         content = self.filters(content_responsibles, content_tasks)
-#         response = HttpResponse(content, content_type='application/json')
-#         response['Content-Disposition'] = 'attachment; filename="filters.json"'
-#         return response
-    
-#     def filters(self,content_responsibles, content_tasks):
-#         num_responsibles = user.TaskResponsible.objects.count()
-#         num_tasks = user.TaskProfile.objects.count()
-#         num_users = AuthUser.objects.count()
-#         print(num_users)
-#         # for responsible in content_responsibles:
-#         content = []
-#         for i in range(num_users):
-#             a = user.TaskProfile.objects.filter(created_by=i).count()
-#             b = user.TaskProfile.objects.filter(finished_by=i).count()
-#             dict = {"TasksCreatedPerUser": a,
-#                     "TasksFinishedPerUser": b}
-#             content.append(dict)
-#         repr_content = repr(content)
-#         bytes_content = repr_content.encode('utf-8')
+        except KeyError:
+            return Response({"detail": "Formato não suportado "},status=status.HTTP_400_BAD_REQUEST)
 
-#         return bytes_content
+               
+    def get_json(self, serializer):
+        # Serializa os dados em JSON
+        content = JSONRenderer().render(serializer.data)
+        return content, "application/json"
+    
+    def get_txt(self, serializer):
+        # Gera o conteúdo em formato de texto
+        content = []
+        for task in serializer.data:
+            content.append(
+                f'Titulo: {task["title"]}\n'
+                f'Descricao: {task["description"]}\n'
+                f'Prazo: {task["deadline"]}\n'
+                f'Data de Lançamento: {task["release"]}\n'
+                f'Concluida: {task["completed"]}\n'
+                f'Finalizada Em: {task["finished_in"]}\n'
+                f'Finalizada Por: {task["finished_by"]}\n'
+                f'Criada Em: {task["created_in"]}\n'
+                f'Atualizada: {task["updated"]}\n'
+                f'Responsavel: {task["responsible"]}\n'
+                '---\n'
+            )
+        content = ''.join(content)
+
+        return content, 'text/plain; charset=utf-8'
 
 class ExportFilters(APIView):
     renderer_classes = [JSONRenderer]
     
-    def get(self, request):
-
-        responsibles = user.TaskResponsible.objects.all()
-        serializer_responsibles = TaskResponsibleSerializer(responsibles, many=True)
-
-        tasks = TaskProfile.objects.all()
-        serializer_tasks = TasksSerializer(tasks, many=True)
+    def get(self, request, report_type, slug):
+        created_by = request.GET.get('created_by')
+        finished_by = request.GET.get('finished_by')
+        responsible = request.GET.get('responsible')
+        created_in = request.GET.get('created_in')
+        fininshed_in = request.GET.get('finished_in')
+        deadline = request.GET.get('deadline')
         
-        content = self.filters()
+        # ----------- Maior que ou igual a -------- Menor que ou igual a ------
+        filters_report = Q(deadline__gte=created_in) & Q(deadline__lte=fininshed_in)
         
-        response = HttpResponse(content, content_type='application/json')
-        response['Content-Disposition'] = 'attachment; filename="filters.json"'
-        return response
+        # Fazendo uma busca primária no Banco de Dados:
+        tasks = TaskProfile.objects.filter(filters_report)
+        
+        # Boas práticas para dicionário, fez o mesmo com o txt/json
+        report_types = {
+            'created_and_finished_by_user': self.created_and_finished_by_user(tasks),
+            'activites_by_responsible': self.activities_by_responsible(tasks),
+            'activites_completed_after_the_deadline': self.activites_completed_after_the_dealine(tasks)
+        }
+        
+        try:
+            data = report_types[report_type](tasks)
+            
+            return Response(data,
+                            status=status.HTTP_200_OK)
+        
+        except KeyError:
+            return Response({'Release: Invalid Report'},
+                            status=status.HTTP_400_BAD_REQUEST)
+            
+    def created_and_finished_by_user(self, tasks):
+        created = tasks.values('created_by__username').annotate(total_created=Count('id'))
+        finished = tasks.filter(completed=True).values('finished_by__username').annotate(total_finalished=Count('id'))
+
+        data = {
+            'created_by_user': list(created),
+            'finished_by_user': list(finished)
+        }
+        return data
     
-    def filters(self):
+    def activities_by_responsible(self, tasks):
+        activite_by_responsible = tasks.values('responsaveis__username').annotate(total_ativities=Count('id'))
+
+        data = {
+            'activities_by_responsible': list(activite_by_responsible)
+        }
+        return data   
+
+    def activites_completed_after_the_dealine(self, tasks):
+        today = datetime.today().date()
+        late = tasks.filter(completed=False, deadline__lt=today).count()
+        activities_completed_after_the_deadline = tasks.filter(completed=True, finished_in__date__gt=F('deadline')).count()
+
+        data = {
+            'late_activites': late,
+            'activities_completed_after_the_deadline': activities_completed_after_the_deadline
+        }
+        return data
+    
+        
+
+        # responsibles = user.TaskResponsible.objects.all()
+        # serializer_responsibles = TaskResponsibleSerializer(responsibles, many=True)
+
+        # tasks = TaskProfile.objects.all()
+        # serializer_tasks = TasksSerializer(tasks, many=True)
+        
+        # content = self.filters()
+        
+        # response = HttpResponse(content, content_type='application/json')
+        # response['Content-Disposition'] = 'attachment; filename="filters.json"'
+        # return response
+     
+"""    def filters(self):
         num_responsibles = user.TaskResponsible.objects.count()
         num_tasks = TaskProfile.objects.count()
         num_users = AuthUser.objects.count()
-        
+        tasks = TaskProfile.objects.values(
+            "responsible",
+            name=Concat(F("responsible__first_name"),Value(" "), F("responsible__last_name"))
+        ).annotate(cnt=Count("id")).values("responsible", "cnt", "name")
+        print(tasks)
         content = []
         for user_id in range(1, num_users + 1):
             tasks_created = TaskProfile.objects.filter(created_by=user_id).count()
@@ -154,66 +228,7 @@ class ExportFilters(APIView):
             content.append(dict_content)
         
         json_content = JSONRenderer().render(content)
-        return json_content
-
-class ExportTxt(APIView):
-###################################################################
-    def get(self, request):
-        tasks = TaskProfile.objects.all()
-        content =''
-        for task in tasks:
-            serializer_task = TasksSerializer(task).data
-            content += (
-                f'Titulo: {serializer_task["title"]}, '
-                f'Descricao: {serializer_task["description"]}, '
-                f'Data de Lançamento: {serializer_task["release"]}, '
-                f'Finalizada: {serializer_task["completed"]}, '
-                f'Finalizada Em: {serializer_task["finished_in"]}, '
-                f'Finalizada Por: {serializer_task["finished_by"]}, '
-                f'Criada Em: {serializer_task["created_in"]}, '
-                f'Atualizada: {serializer_task["updated"]}, '
-                f'Responsavel: {serializer_task["responsible"]}, '
-            )
-        response = HttpResponse(content, content_type='text/plain')
-        response['Content-Disposition'] = 'attachment; filename="tasks.txt"'
-        return response
-
-
-
-
-# class ExportJson(APIView):
-#     renderer_classes = [JSONRenderer]
-    
-#     def get(self, request):
-#         tasks = TaskProfile.objects.all()
-#         serializer = TasksSerializer(tasks, many=True)
-#         content = JSONRenderer().render(serializer.data) # Converte os dados serializados em json
-#         response = HttpResponse(content, content_type='application/json')
-#         response['Content-Disposition'] = 'attachment; filename="tasks.json"' # Baixa o arquivo
-#         return response
-    
-# class ExportTxt(APIView):
-# ###################################################################
-#     def get(self, request):
-#         tasks = TaskProfile.objects.all()
-#         content =''
-
-#         for task in tasks:
-#             serializer_task = TasksSerializer(task).data
-#             content += (
-#                 f'Titulo: {serializer_task["title"]}, '
-#                 f'Descricao: {serializer_task["description"]}, '
-#                 f'Data de Lançamento: {serializer_task["release"]}, '
-#                 f'Finalizada: {serializer_task["completed"]}, '
-#                 f'Finalizada Em: {serializer_task["finished_in"]}, '
-#                 f'Finalizada Por: {serializer_task["finished_by"]}, '
-#                 f'Criada Em: {serializer_task["created_in"]}, '
-#                 f'Atualizada: {serializer_task["updated"]}, '
-#                 f'Responsavel: {serializer_task["responsible"]}, '
-#             )
-#         response = HttpResponse(content, content_type='text/plain')
-#         response['Content-Disposition'] = 'attachment; filename="tasks.txt"'
-#         return response
+        return json_content"""
 
 class TaskViewsSet(viewsets.ModelViewSet):
     serializer_class = TasksSerializer
@@ -226,4 +241,10 @@ class TaskViewsSet(viewsets.ModelViewSet):
 
 
     
-
+        # # Verificação: Minhas verificações já foram feitas nos serializ
+        # if created_by:
+        #     filters &= Q(created_by__id=created_by)
+        # if finished_by:
+        #     filters &= Q(finished_by__id=finished_by)
+        # if responsible:
+        #     filters &= Q(responsible__id=responsible)

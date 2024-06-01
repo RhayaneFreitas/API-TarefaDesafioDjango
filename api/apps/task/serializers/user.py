@@ -16,7 +16,6 @@ from django.utils.translation import gettext_lazy as _
 
 class TasksSerializer(serializers.ModelSerializer):
     
-    
     class Meta:
         model = TaskProfile
         fields = (
@@ -24,6 +23,7 @@ class TasksSerializer(serializers.ModelSerializer):
             "title",
             "release",
             "description",
+            "deadline",
             "completed",
             "created_by",
             "finished_in",
@@ -47,10 +47,9 @@ class TasksSerializer(serializers.ModelSerializer):
         if re.search(r'[^A-Za-z\s]', verification):
             raise serializers.ValidationError(
                 {
-                    'Release': _("O título não pode conter números ou caracteres especiais.")
+                    'Release': _("O título não pode conter somente números ou caracteres especiais.")
                 }
             )
-        
         return verification
     
     def validate_release(self, verification):
