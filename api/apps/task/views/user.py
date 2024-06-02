@@ -5,11 +5,13 @@ from django.http import HttpResponse
 import json
 from datetime import (
     datetime,
-    timedelta
+    timedelta,
+    date
 )
 from api.apps.task.serializers.user import (
     TasksSerializer,
     TaskResponsibleSerializer,
+    TaskReportFilterSerializer
     )
 from api.apps.task.serializers import user
 from api.apps.task.models import (
@@ -39,6 +41,15 @@ from django.db.models import (
     F,
     Q
     )
+
+#Entendendo parte Agregate Django:
+from django.db.models.aggregates import (
+    Avg,
+    Sum,
+    Count,
+    Min,
+    Max
+)
 from django.db.models.functions import Concat
 from django.shortcuts import get_object_or_404
 
@@ -131,84 +142,82 @@ class ExportData(APIView):
 
         return content, 'text/plain; charset=utf-8'
 
-class ExportFilters(APIView):
-    renderer_classes = [JSONRenderer]
+class TaskReportFilters(APIView):
     
-    def get(self, request, report_type, slug):
-        created_by = request.GET.get('created_by')
-        finished_by = request.GET.get('finished_by')
-        responsible = request.GET.get('responsible')
-        created_in = request.GET.get('created_in')
-        fininshed_in = request.GET.get('finished_in')
-        deadline = request.GET.get('deadline')
-        
-        # ----------- Maior que ou igual a -------- Menor que ou igual a ------
-        filters_report = Q(deadline__gte=created_in) & Q(deadline__lte=fininshed_in)
-        
-        # Fazendo uma busca primária no Banco de Dados:
-        tasks = TaskProfile.objects.filter(filters_report)
-        
-        # Boas práticas para dicionário, fez o mesmo com o txt/json
-        report_types = {
-            'created_and_finished_by_user': self.created_and_finished_by_user(tasks),
-            'activites_by_responsible': self.activities_by_responsible(tasks),
-            'activites_completed_after_the_deadline': self.activites_completed_after_the_dealine(tasks)
-        }
-        
-        try:
-            data = report_types[report_type](tasks)
+    def get(self, request, report_type):
+        serializer = TaskReportFilterSerializer(data=request.GET)
+        if serializer.is_valid():
+            filters = serializer.get_filters()
+            tasks = TaskProfile.objects.filter(filters)
+
+            report_types = {
+                'created_and_finished_by_user': self.created_and_finished_by_user,
+                'activites_by_responsible': self.activities_by_responsible,
+                'activites_completed_after_the_deadline': self.activites_completed_after_the_dealine
+            }
+
+            try:
+                data = report_types[report_type](tasks)
+                
+                return Response(data, status=status.HTTP_200_OK)
             
-            return Response(data,
-                            status=status.HTTP_200_OK)
+            except KeyError:
+                return Response({'Release': 'O tipo de relatório fornecido é inválido.'}, status=status.HTTP_400_BAD_REQUEST)
         
-        except KeyError:
-            return Response({'Release: Invalid Report'},
-                            status=status.HTTP_400_BAD_REQUEST)
-            
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
     def created_and_finished_by_user(self, tasks):
-        created = tasks.values('created_by__username').annotate(total_created=Count('id'))
-        finished = tasks.filter(completed=True).values('finished_by__username').annotate(total_finalished=Count('id'))
+        created = tasks.values('created_by__user').annotate(total_created=Count('id'))
+        finished = tasks.filter(completed=True).values('finished_by__user').annotate(total_finished=Count('id'))
 
         data = {
             'created_by_user': list(created),
             'finished_by_user': list(finished)
         }
         return data
-    
+
     def activities_by_responsible(self, tasks):
-        activite_by_responsible = tasks.values('responsaveis__username').annotate(total_ativities=Count('id'))
+    # Gerar Lista de tarefas que possuem mais de 1 responsavel:
+         # list_activities_by_autor = tasks.objects.annotate(num_responsible=Count("responsible")).filter(num_responsible__gt=1)
+        
+        activities_by_responsible = tasks.values('responsible__user').annotate(total_activities=Count('id'))
 
         data = {
-            'activities_by_responsible': list(activite_by_responsible)
-        }
-        return data   
-
-    def activites_completed_after_the_dealine(self, tasks):
-        today = datetime.today().date()
-        late = tasks.filter(completed=False, deadline__lt=today).count()
-        activities_completed_after_the_deadline = tasks.filter(completed=True, finished_in__date__gt=F('deadline')).count()
-
-        data = {
-            'late_activites': late,
-            'activities_completed_after_the_deadline': activities_completed_after_the_deadline
+            'activities_by_responsible': list(activities_by_responsible)
+            
         }
         return data
+
+    def activites_completed_after_the_dealine(self, tasks):
+        today = date.today()
+        late = tasks.filter(completed=False, deadline__lt=today).count()
+        completed_after_deadline = tasks.filter(completed=True, finished_in__date__gt=F('deadline')).count()
+
+        data = {
+            'late_tasks': late,
+            'activities_completed_after_the_deadline': completed_after_deadline
+        }
+        return data
+
+class ExportFilters(APIView):
+    renderer_classes = [JSONRenderer]
     
-        
+    def get(self, request, slug):
+        print(slug)
 
-        # responsibles = user.TaskResponsible.objects.all()
-        # serializer_responsibles = TaskResponsibleSerializer(responsibles, many=True)
+        responsibles = user.TaskResponsible.objects.all()
+        serializer_responsibles = TaskResponsibleSerializer(responsibles, many=True)
 
-        # tasks = TaskProfile.objects.all()
-        # serializer_tasks = TasksSerializer(tasks, many=True)
+        tasks = TaskProfile.objects.all()
+        serializer_tasks = TasksSerializer(tasks, many=True)
         
-        # content = self.filters()
+        content = self.filters()
         
-        # response = HttpResponse(content, content_type='application/json')
-        # response['Content-Disposition'] = 'attachment; filename="filters.json"'
-        # return response
-     
-"""    def filters(self):
+        response = HttpResponse(content, content_type='application/json')
+        response['Content-Disposition'] = 'attachment; filename="filters.json"'
+        return response
+    
+    def filters(self):
         num_responsibles = user.TaskResponsible.objects.count()
         num_tasks = TaskProfile.objects.count()
         num_users = AuthUser.objects.count()
@@ -228,7 +237,10 @@ class ExportFilters(APIView):
             content.append(dict_content)
         
         json_content = JSONRenderer().render(content)
-        return json_content"""
+        return json_content
+    
+# tarefa in tarefas:
+    #print(f"Nome: {responsavel.created_by} -  Quantidade: {responsavel.}")
 
 class TaskViewsSet(viewsets.ModelViewSet):
     serializer_class = TasksSerializer
@@ -238,13 +250,3 @@ class TaskViewsSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend] 
     filterset_fields = ['created_in', 'finished_in']
     
-
-
-    
-        # # Verificação: Minhas verificações já foram feitas nos serializ
-        # if created_by:
-        #     filters &= Q(created_by__id=created_by)
-        # if finished_by:
-        #     filters &= Q(finished_by__id=finished_by)
-        # if responsible:
-        #     filters &= Q(responsible__id=responsible)

@@ -13,7 +13,9 @@ from django.urls import(
 )
 from api.apps.task.views.user import (
     ExportData,
-    ExportFilters
+    ExportFilters,
+    TaskReportFilters
+    
 )
 
 from rest_framework.routers import DefaultRouter
@@ -42,19 +44,21 @@ urlpatterns = [
     path('',
          include(route.urls)
     ),
-    # path('export/<slug:slug>/',
-    #      user.ExportFilters.as_view(
+    path('export/<slug:slug>/',
+         user.ExportFilters.as_view(
              
-    #      ),
-    #      name='export_filters'
-    # ),
+         ),
+         name='export_filters'
+    ),
     path('export_data/',
          ExportData.as_view(),
          name='exportdata'
     ),
-    path('report/<str:report_type>/',
-         ExportFilters.as_view(),
-         name='task-report')
+    path('export_report/<str:report_type>/',
+         TaskReportFilters.as_view(),
+         name='task-report' 
+    ),
+    
 ]
 
 
