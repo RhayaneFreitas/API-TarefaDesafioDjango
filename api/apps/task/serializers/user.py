@@ -148,6 +148,13 @@ class TaskReportFilterSerializer(serializers.Serializer):
                     _("O período entre as datas não pode ser maior que 365 dias.")
                 )
 
+        elif created_in or finished_in:
+            raise serializers.ValidationError(
+                {
+                    'Release': _("data de criação e data final são obrigatórios.")
+                }
+            )
+        
         return data
 
     def get_filters(self):
