@@ -147,12 +147,9 @@ class TaskReportFilterSerializer(serializers.Serializer):
                 raise serializers.ValidationError(
                     _("O período entre as datas não pode ser maior que 365 dias.")
                 )
-
-        elif created_in or finished_in:
+        else:
             raise serializers.ValidationError(
-                {
-                    'Release': _("data de criação e data final são obrigatórios.")
-                }
+                _("As datas de criação e finalização são obrigatórias.")
             )
         
         return data
