@@ -21,7 +21,7 @@ from api.apps.task.views.user import (
 from rest_framework.routers import DefaultRouter
 route = routers.DefaultRouter()
 
-route.register(r'tasks-list', taskviewsets.TaskViewsSet, basename="Task")
+route.register(r'tasks', taskviewsets.TaskViewsSet, basename="task")
 
 urlpatterns = [
     path(
@@ -39,7 +39,8 @@ urlpatterns = [
         'task-view/',
         user.TaskView.as_view(
             
-        )
+        ),
+        name='task-view'
     ),
     path('',
          include(route.urls)
