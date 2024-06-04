@@ -21,7 +21,7 @@ from api.apps.task.views.user import (
 from rest_framework.routers import DefaultRouter
 route = routers.DefaultRouter()
 
-route.register(r'tasks', taskviewsets.TaskViewsSet, basename="task")
+route.register(r'tasks', taskviewsets.TaskViewsSet, basename="task") # Vizualização Web
 
 urlpatterns = [
     path(
@@ -61,7 +61,6 @@ urlpatterns = [
     ),
     
 ]
-
 
 """Antes das Melhorias:
 
