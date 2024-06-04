@@ -59,6 +59,17 @@ class TasksSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {
                     'Release:': _("O ano não pode ser anterior ao ano de 2000.")
+                    
+                }
+            )
+        return verification
+    
+    def validate_deadline(self, verification):
+        if verification.year < 2000:
+            raise serializers.ValidationError(
+                {
+                    'Release:': _("O ano não pode ser anterior ao ano de 2000.")
+                    
                 }
             )
         return verification
