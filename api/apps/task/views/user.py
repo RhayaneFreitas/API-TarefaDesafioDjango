@@ -18,12 +18,9 @@ from api.apps.task.models import (
     TaskProfile,
     
     )
-from api.apps.task.models import user
+from api.apps.task.models import task
 from rest_framework.authentication import TokenAuthentication #Udemy
 from rest_framework import generics
-from django.contrib.auth.models import (
-    User as AuthUser,
-    )
 import django_filters.rest_framework # Filters
 from django_filters.rest_framework import DjangoFilterBackend
 
@@ -198,53 +195,13 @@ class TaskReportFilters(APIView):
             'activities_completed_after_the_deadline': completed_after_deadline
         }
         return data
-
-class ExportFilters(APIView):
-    renderer_classes = [JSONRenderer]
-    
-    def get(self, request, slug):
-        print(slug)
-
-        responsibles = user.TaskResponsible.objects.all()
-        serializer_responsibles = TaskResponsibleSerializer(responsibles, many=True)
-
-        tasks = TaskProfile.objects.all()
-        serializer_tasks = TasksSerializer(tasks, many=True)
-        
-        content = self.filters()
-        
-        response = HttpResponse(content, content_type='application/json')
-        response['Content-Disposition'] = 'attachment; filename="filters.json"'
-        return response
-    
-    def filters(self):
-        num_responsibles = user.TaskResponsible.objects.count()
-        num_tasks = TaskProfile.objects.count()
-        num_users = AuthUser.objects.count()
-        tasks = TaskProfile.objects.values(
-            "responsible",
-            name=Concat(F("responsible__first_name"),Value(" "), F("responsible__last_name"))
-        ).annotate(cnt=Count("id")).values("responsible", "cnt", "name")
-        print(tasks)
-        content = []
-        for user_id in range(1, num_users + 1):
-            tasks_created = TaskProfile.objects.filter(created_by=user_id).count()
-            tasks_finished = TaskProfile.objects.filter(finished_by=user_id).count()
-            dict_content = {
-                "TasksCreatedPerUser": tasks_created,
-                "TasksFinishedPerUser": tasks_finished
-            }
-            content.append(dict_content)
-        
-        json_content = JSONRenderer().render(content)
-        return json_content
     
 # tarefa in tarefas:
     #print(f"Nome: {responsavel.created_by} -  Quantidade: {responsavel.}")
 
 class TaskViewsSet(viewsets.ModelViewSet):
     serializer_class = TasksSerializer
-    queryset = user.TaskProfile.objects.all()
+    queryset = task.TaskProfile.objects.all()
     # filter_backends = (filters.SearchFilter,) simples
     # search_fields = ('title', 'release')
     filter_backends = [DjangoFilterBackend] 

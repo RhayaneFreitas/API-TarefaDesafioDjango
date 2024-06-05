@@ -13,7 +13,6 @@ from django.urls import(
 )
 from api.apps.task.views.user import (
     ExportData,
-    ExportFilters,
     TaskReportFilters
     
 )
@@ -44,12 +43,6 @@ urlpatterns = [
     ),
     path('',
          include(route.urls)
-    ),
-    path('export/<slug:slug>/',
-         user.ExportFilters.as_view(
-             
-         ),
-         name='export_filters'
     ),
     path('export_data/',
          ExportData.as_view(),
@@ -85,6 +78,12 @@ path('export_data/<int:pk>/<slug:slug>/',ExportData.as_view(), name='exportdata'
         
     #     ),
     # ),
+        path('export/<slug:slug>/',
+         user.ExportFilters.as_view(
+             
+         ),
+         name='export_filters'
+    ),
 
 
 

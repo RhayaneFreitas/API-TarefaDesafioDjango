@@ -4,7 +4,7 @@ from api.apps.task.models import (
     #TaskResponsible
 )
 from django.db.models import Q
-from api.apps.task.models import user
+from api.apps.task.models import task
 from rest_framework import (
     status,
     viewsets,
@@ -179,7 +179,7 @@ class TaskReportFilterSerializer(serializers.Serializer):
     
 class TaskResponsibleSerializer(serializers.ModelSerializer):
     class Meta:
-        model = user.TaskResponsible
+        model = task.TaskResponsible
         fields = (
             "user",
             "task"   

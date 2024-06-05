@@ -3,7 +3,7 @@ from rest_framework import status
 from django.urls import reverse
 from api.apps.task.models import TaskProfile
 from django.contrib.auth.models import (
-    User as AuthUser,
+    User 
 )
 from datetime import date
 
@@ -12,7 +12,7 @@ from datetime import date
 class TaskTest(APITestCase):
     
     def setUp(self):
-        self.user = AuthUser.objects.create_user(username='Rhayane', 
+        self.user = User.objects.create_user(username='Rhayane', 
             password='admin')
         self.client.force_authenticate(user=self.user)    
     

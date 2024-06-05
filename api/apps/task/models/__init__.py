@@ -1,1 +1,1 @@
-from .user import TaskProfile
+from .task import TaskProfile, User

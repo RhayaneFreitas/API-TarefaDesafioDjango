@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from api.apps.task.models import user
+from api.apps.task.models import task
 
-admin.site.register(user.TaskProfile)
-admin.site.register(user.TaskResponsible)
+admin.site.register(task.TaskProfile)
+admin.site.register(task.TaskResponsible)

@@ -1,14 +1,14 @@
 from django.test import TestCase
-from django.contrib.auth.models import User as AuthUser
+from django.contrib.auth.models import User
 from api.apps.task.models import TaskProfile
-from api.apps.task.models import user
+from api.apps.task.models import task
 from django.contrib.auth import get_user_model
 
 
 class TaskProfileTestCase(TestCase):
     
     def setUp(self):
-        self.user = AuthUser.objects.create_user(
+        self.user = User.objects.create_user(
             username='testuser',
             email='test@example.com',
             password='testpassword'
@@ -27,7 +27,7 @@ class TaskProfileTestCase(TestCase):
             title='Test Task created',
             created_by=self.user
         )
-        task_responsible = user.TaskResponsible.objects.create(
+        task_responsible = task.TaskResponsible.objects.create(
             task=task,
             user=self.user
         )
