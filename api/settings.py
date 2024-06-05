@@ -87,7 +87,7 @@ DATABASES = {
         'ENGINE': os.environ.get('DB_DRIVER','django.db.backends.postgresql'),
         'USER': os.environ.get('PG_USER','postgres'),
         'PASSWORD':os.environ.get('PG_PASSWORD','postgres'),
-        'NAME': os.environ.get('PG_DB','postgres'),
+        'NAME': os.environ.get('PG_DB','task_dev'),
         'PORT': os.environ.get('PG_PORT','5432'),
         'HOST': os.environ.get('PG_HOST','localhost'),
     }
