@@ -196,8 +196,47 @@ class TaskReportFilters(APIView):
         }
         return data
     
-# tarefa in tarefas:
-    #print(f"Nome: {responsavel.created_by} -  Quantidade: {responsavel.}")
+    
+# Atividade: Separar as atividades por Classe:
+# class BaseReport:
+#     def __init__(self, tasks):
+#         self.tasks = tasks
+
+#     def generate_report(self):
+#         raise NotImplementedError # -> Deve implementar na subclasse
+
+# class CreatedAndFinishedByUserReport(BaseReport):
+#     def generate_report(self):
+#         created = self.tasks.values('created_by__user').annotate(total_created=Count('id'))
+#         finished = self.tasks.filter(completed=True).values('finished_by__user').annotate(total_finished=Count('id'))
+
+#         data = {
+#             'created_by_user': list(created),
+#             'finished_by_user': list(finished)
+#         }
+#         return data
+
+# class ActivitiesByResponsibleReport(BaseReport):
+#     def generate_report(self):
+#         activities_by_responsible = self.tasks.values('responsible__user').annotate(total_activities=Count('id'))
+
+#         data = {
+#             'activities_by_responsible': list(activities_by_responsible)
+#         }
+#         return data
+
+# class ActivitiesCompletedAfterDeadlineReport(BaseReport):
+#     def generate_report(self):
+#         today = date.today()
+#         late = self.tasks.filter(completed=False, deadline__lt=today).count()
+#         completed_after_deadline = self.tasks.filter(completed=True, finished_in__date__gt=F('deadline')).count()
+
+#         data = {
+#             'late_tasks': late,
+#             'activities_completed_after_the_deadline': completed_after_deadline
+#         }
+#         return data    
+    
 
 class TaskViewsSet(viewsets.ModelViewSet):
     serializer_class = TasksSerializer
