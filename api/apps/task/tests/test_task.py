@@ -2,9 +2,11 @@ from django.test import TestCase
 from django.contrib.auth.models import User as AuthUser
 from api.apps.task.models import TaskProfile
 from api.apps.task.models import user
+from django.contrib.auth import get_user_model
 
 
 class TaskProfileTestCase(TestCase):
+    
     def setUp(self):
         self.user = AuthUser.objects.create_user(
             username='testuser',

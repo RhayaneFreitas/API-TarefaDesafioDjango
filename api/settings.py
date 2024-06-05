@@ -156,3 +156,5 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# CUSTOM USER
+AUTH_USER_MODEL = 'task.User'
