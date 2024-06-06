@@ -49,7 +49,8 @@ from django.db.models.aggregates import (
 )
 from django.db.models.functions import Concat
 from django.shortcuts import get_object_or_404
-
+from openpyxl import Workbook
+from io import BytesIO # Prepara o arquivo para ser enviado como resposta
 
 class TaskView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -100,7 +101,8 @@ class ExportData(APIView):
         serializer = TasksSerializer(tasks,many=True)
         formatos = {
             "json": self.get_json,
-            "txt": self.get_txt
+            "txt": self.get_txt,
+            "excel": self.get_excel
         }
         try:
             content, content_type = formatos[formato](serializer)
@@ -138,6 +140,31 @@ class ExportData(APIView):
         content = ''.join(content)
 
         return content, 'text/plain; charset=utf-8'
+    
+    def get_excel(self, serializer):
+
+        wb = Workbook() # -> Permite ler e Escrever Arquivo em Excel
+        ws = wb.active # Representa o Arquivo em Excel
+
+        # Adiciona os cabeçalhos
+        headers = ["Titulo", "Descricao", "Prazo", "Data de Lançamento", "Concluida", 
+                   "Finalizada Em", "Finalizada Por", "Criada Em", "Atualizada", "Responsavel"]
+        ws.append(headers)
+
+        # Adiciona os dados
+        for task in serializer.data: # Tentar lapidar, Fernando não gosta de for.
+            ws.append([
+                task["title"], task["description"], task["deadline"], task["release"], task["completed"], 
+                task["finished_in"], task["finished_by"], task["created_in"], task["updated"], task["responsible"]
+            ])
+
+        # Salva o arquivo em um objeto de bytes
+
+        excel_file = BytesIO() # Manipula os dados binários como se forsse um arquivo.
+        wb.save(excel_file)
+        excel_file.seek(0) # Salva o conteúdo
+
+        return excel_file.read(), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' # Captura todo o conteúdo do Arquivo
 
 class TaskReportFilters(APIView):
     
