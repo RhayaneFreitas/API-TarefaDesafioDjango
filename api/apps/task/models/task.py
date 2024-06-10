@@ -7,16 +7,16 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
 
+
 class UserManager(BaseUserManager):
 
-
-    def create_user(self, email, name, password=None, **extra_fields):
+    def create_user(self, email, name, password=None):
 
         if not email:
             raise ValueError('User must have an email address.')
 
         email = self.normalize_email(email)  # Modificação: Normalizar o email
-        user = self.model(email=email, name=name, **extra_fields)
+        user = self.model(email=email, name=name)
         user.set_password(password)
         user.save(using=self._db)  # Boas práticas
 
@@ -27,6 +27,7 @@ class UserManager(BaseUserManager):
         user = self.create_user(email, name, password)
         
         user.is_superuser = True
+        user.is_staff = True
         user.save(using=self.db)
 
         return user
@@ -35,31 +36,42 @@ class UserManager(BaseUserManager):
 class User(AbstractBaseUser, PermissionsMixin):
 
     email = models.EmailField(
-        max_length=255,
-        unique=True
+        _('Email Address'),
+        unique=True,
+        max_length=255   
     )
     name = models.CharField(
-        max_length=255
+        _('Name'),
+        max_length=255   
     )
-
-    objects = UserManager()  
-
-    USERNAME_FIELD = 'email'  
+    is_active = models.BooleanField(
+        _('Active'),
+        default=True
+    )
+    is_staff = models.BooleanField(
+        _('Staff'),
+        default=False
+    )
+    
+    objects = UserManager()
+    
+    USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['name']
-
+    
+    def get_full_name(self):
+        return self.name
+    
+    def get_short_name(self):
+        return self.name
+    
     def __str__(self):
-        return self.email
+        return self.email    
 
 class TaskProfile(models.Model):
 
     title = models.CharField(
         _('Title'),
         max_length=255
-    )
-    release = models.DateField(
-        _('Release'),
-        blank=True,
-        null=True
     )
     description = models.TextField(
         _('Description'),
@@ -71,9 +83,15 @@ class TaskProfile(models.Model):
         blank=True, 
         null=True
     )
-    completed = models.BooleanField(
-        _('Completed'),
-        default=False
+    created_in = models.DateField(
+        _('Created In'),
+        blank=True,
+        null=True
+    )
+    updated = models.DateField(
+        _('Updated'),
+        blank=True,
+        null=True
     )
     created_by = models.ForeignKey(
         User,
@@ -94,23 +112,23 @@ class TaskProfile(models.Model):
         blank=True,
         null=True
     )
-    created_in = models.DateTimeField(
-        _('Created In'),
-        auto_now_add=True
-    )
-    updated = models.DateTimeField(
-        _('Updated'),
-        auto_now=True
-    )  
     responsible = models.ManyToManyField(
         User, 
         through='TaskResponsible', 
         related_name='tasks_responsible'
     )
+    release = models.DateField(
+        _('Release'),
+        blank=True,
+        null=True
+    )
+    completed = models.BooleanField(
+        _('Completed'),
+        default=False
+    )
 
     def __str__(self):
         return self.title
-
 
 class TaskResponsible(models.Model):
 

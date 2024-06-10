@@ -4,3 +4,4 @@ from api.apps.task.models import task
 
 admin.site.register(task.TaskProfile)
 admin.site.register(task.TaskResponsible)
+admin.site.register(task.User)

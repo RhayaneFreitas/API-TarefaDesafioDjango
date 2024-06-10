@@ -13,7 +13,9 @@ from django.urls import(
 )
 from api.apps.task.views.user import (
     ExportData,
-    TaskReportFilters
+    TasksCreatedFinishedByUser,
+    # TaskCountByResponsible
+    #TaskReportFilters
     
 )
 
@@ -48,10 +50,18 @@ urlpatterns = [
          ExportData.as_view(),
          name='exportdata'
     ),
-    path('export_report/<str:report_type>/',
-         TaskReportFilters.as_view(),
-         name='task-report' 
+    # path('export-report/<str:report_type>/',
+    #      TaskReportFilters.as_view(),
+    #      name='task_report_filters' 
+    # ),
+    path('tasks-created-finished-by-user/',
+         TasksCreatedFinishedByUser.as_view(),
+         name='tasks-created-finished-by-user'
     ),
+    # path('task-count-by-responsible/',
+    #      TaskCountByResponsible.as_view(),
+    #      name='task-count-by-responsible'
+    # ),
     
 ]
 

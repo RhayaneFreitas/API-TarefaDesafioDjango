@@ -23,15 +23,15 @@ class TasksSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "title",
-            "release",
             "description",
             "deadline",
-            "completed",
+            "created_in",
             "created_by",
+            "updated",
+            "release",
+            "completed",
             "finished_in",
             "finished_by",
-            "created_in",
-            "updated",
             "responsible",
             
         )
@@ -165,17 +165,17 @@ class TaskReportFilterSerializer(serializers.Serializer):
         
         return data
 
-    def get_filters(self):
-        filters = Q(deadline__gte=self.validated_data['created_in']) & Q(deadline__lte=self.validated_data['finished_in'])
+    # def get_filters(self):
+    #     filters = Q(deadline__gte=self.validated_data['created_in']) & Q(deadline__lte=self.validated_data['finished_in'])
 
-        if self.validated_data.get('created_by'):
-            filters &= Q(created_by__id=self.validated_data['created_by'])
-        if self.validated_data.get('finished_by'):
-            filters &= Q(finished_by__id=self.validated_data['finished_by'])
-        if self.validated_data.get('responsible'):
-            filters &= Q(responsible__id=self.validated_data['responsible'])
+    #     if self.validated_data.get('created_by'):
+    #         filters &= Q(created_by__id=self.validated_data['created_by'])
+    #     if self.validated_data.get('finished_by'):
+    #         filters &= Q(finished_by__id=self.validated_data['finished_by'])
+    #     if self.validated_data.get('responsible'):
+    #         filters &= Q(responsible__id=self.validated_data['responsible'])
 
-        return filters    
+    #     return filters    
     
 class TaskResponsibleSerializer(serializers.ModelSerializer):
     class Meta:
