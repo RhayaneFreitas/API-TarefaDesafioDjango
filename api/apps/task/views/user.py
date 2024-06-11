@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework.renderers import JSONRenderer
 from django.http import HttpResponse
 import json
+from django.utils import timezone
 from datetime import (
     datetime,
     timedelta,
@@ -198,15 +199,26 @@ class TasksCreatedFinishedByUser(APIView):
         })
         
 class ActivitiesByResponsible(APIView):
-    """
-    View to list the count of activities per responsible user.
-    """
+
     def get(self, request, format=None): 
         # Aggregate the number of tasks for each user
         # Como seria boas práticas para não deixar tão grande?
         responsible_tasks = User.objects.annotate(task_count=Count('tasks_responsible')).values('id', 'name', 'task_count').order_by('-task_count')
 
         return Response(responsible_tasks) # Retorno dos dados
+    
+class LateTasks(APIView):
+
+    def get(self, request, format=None):
+        current_date = timezone.now().date()
+
+        # Aggregate the number of late tasks for each user
+        late_tasks = User.objects.annotate(
+            late_count=Count('tasks_responsible', filter=Q(tasks_responsible__deadline__lt=current_date, tasks_responsible__completed=False)), # Número de tarefas não completadas
+            finished_late_count=Count('tasks_responsible', filter=Q(tasks_responsible__deadline__lt=F('tasks_responsible__finished_in'))) 
+        ).values('id', 'name', 'late_count', 'finished_late_count') # Finalizadas fora do prazo
+
+        return Response(late_tasks)
 
 class TaskViewsSet(viewsets.ModelViewSet):
     serializer_class = TasksSerializer
