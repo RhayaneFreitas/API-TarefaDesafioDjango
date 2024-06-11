@@ -196,12 +196,21 @@ class TasksCreatedFinishedByUser(APIView):
             "total_tasks_created_by_user": created_task_count,
             "total_tasks_finished_by_user": finished_task_count
         })
+        
+class ActivitiesByResponsible(APIView):
+    """
+    View to list the count of activities per responsible user.
+    """
+    def get(self, request, format=None): 
+        # Aggregate the number of tasks for each user
+        # Como seria boas práticas para não deixar tão grande?
+        responsible_tasks = User.objects.annotate(task_count=Count('tasks_responsible')).values('id', 'name', 'task_count').order_by('-task_count')
+
+        return Response(responsible_tasks) # Retorno dos dados
 
 class TaskViewsSet(viewsets.ModelViewSet):
     serializer_class = TasksSerializer
     queryset = task.TaskProfile.objects.all()
-    # filter_backends = (filters.SearchFilter,) simples
-    # search_fields = ('title', 'release')
     filter_backends = [DjangoFilterBackend] 
     filterset_fields = ['created_in', 'finished_in']
 # ---------------------------------------------------------------------------------------------------------------------------------
