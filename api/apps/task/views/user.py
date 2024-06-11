@@ -201,7 +201,7 @@ class TasksCreatedFinishedByUser(APIView):
 class ActivitiesByResponsible(APIView):
 
     def get(self, request, format=None): 
-        # Aggregate the number of tasks for each user
+        # Quantidade de atividades por responsável
         # Como seria boas práticas para não deixar tão grande?
         responsible_tasks = User.objects.annotate(task_count=Count('tasks_responsible')).values('id', 'name', 'task_count').order_by('-task_count')
 
@@ -212,7 +212,7 @@ class LateTasks(APIView):
     def get(self, request, format=None):
         current_date = timezone.now().date()
 
-        # Aggregate the number of late tasks for each user
+        # Aggregate o número de tarefas atrasadas para cada usuário
         late_tasks = User.objects.annotate(
             late_count=Count('tasks_responsible', filter=Q(tasks_responsible__deadline__lt=current_date, tasks_responsible__completed=False)), # Número de tarefas não completadas
             finished_late_count=Count('tasks_responsible', filter=Q(tasks_responsible__deadline__lt=F('tasks_responsible__finished_in'))) 
@@ -223,12 +223,23 @@ class LateTasks(APIView):
 class UserFinishedOwnTasks(APIView):
 
     def get(self, request, format=None):
-        # Aggregate the number of tasks where the user was responsible and also finished the task
+        # o número de tarefas em que o usuário foi responsável e também finalizou a tarefa
         user_finished_own_tasks = User.objects.annotate(
             own_finished_count=Count('tasks_responsible', filter=Q(tasks_responsible__finished_by=F('pk')))
         ).values('id', 'name', 'own_finished_count')
 
         return Response(user_finished_own_tasks)
+
+    
+class UserCreatedAndFinishedTasksView(APIView):
+
+    def get(self, request, format=None):
+        # Quantas tarefas que o usuário estava como criador, foi ele quem finalizou a tarefa.
+        user_created_and_finished_tasks = User.objects.annotate(
+            created_and_finished_count=Count('task_profiles_created', filter=Q(task_profiles_created__finished_by=F('pk'))) # Acessando o valor da chave primária.
+        ).values('id', 'name', 'created_and_finished_count')
+
+        return Response(user_created_and_finished_tasks)
 
 
 class TaskViewsSet(viewsets.ModelViewSet):
