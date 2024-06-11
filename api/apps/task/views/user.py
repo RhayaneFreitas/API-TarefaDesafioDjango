@@ -52,6 +52,7 @@ from django.db.models.aggregates import (
 )
 from django.db.models.functions import Concat
 from django.shortcuts import get_object_or_404
+from openpyxl import Workbook
 
 
 class TaskView(APIView):
@@ -143,7 +144,7 @@ class ExportData(APIView):
         return content, 'text/plain; charset=utf-8'
 
 
-class TasksCreatedFinishedByUser(APIView):
+class TasksCreatedFinishedByUserView(APIView):
 
     def get(self, request):
         # Se os parâmetros de filtro não estiverem presentes, retornar todos os dados
@@ -198,7 +199,7 @@ class TasksCreatedFinishedByUser(APIView):
             "total_tasks_finished_by_user": finished_task_count
         })
         
-class ActivitiesByResponsible(APIView):
+class ActivitiesByResponsibleView(APIView):
 
     def get(self, request, format=None): 
         # Quantidade de atividades por responsável
@@ -207,7 +208,7 @@ class ActivitiesByResponsible(APIView):
 
         return Response(responsible_tasks) # Retorno dos dados
     
-class LateTasks(APIView):
+class LateTasksView(APIView):
 
     def get(self, request, format=None):
         current_date = timezone.now().date()
@@ -220,15 +221,32 @@ class LateTasks(APIView):
 
         return Response(late_tasks)
 
-class UserFinishedOwnTasks(APIView):
+class UserFinishedOwnTasksView(APIView):
 
     def get(self, request, format=None):
-        # o número de tarefas em que o usuário foi responsável e também finalizou a tarefa
+        # Obter o número de tarefas que o usuário foi responsável e também finalizou a tarefa
         user_finished_own_tasks = User.objects.annotate(
             own_finished_count=Count('tasks_responsible', filter=Q(tasks_responsible__finished_by=F('pk')))
         ).values('id', 'name', 'own_finished_count')
 
-        return Response(user_finished_own_tasks)
+        # Criar um arquivo Excel
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Terminaram suas tarefas"
+
+        # Adicionar os cabeçalhos
+        ws.append(["ID", "Name", "Own Finished Count"])
+
+        # Adicionar os dados
+        for user_task in user_finished_own_tasks:
+            ws.append([user_task['id'], user_task['name'], user_task['own_finished_count']])
+
+        # Salvar o arquivo Excel em um objeto HttpResponse
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = 'attachment; filename=user_finished_own_tasks.xlsx'
+        wb.save(response)
+
+        return response
 
     
 class UserCreatedAndFinishedTasksView(APIView):
