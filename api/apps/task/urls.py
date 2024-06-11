@@ -52,15 +52,15 @@ urlpatterns = [
          ExportData.as_view(),
          name='exportdata'
     ),
-    path('tasks-created-finished-by-user/',
+    path('export-tasks-created-finished-by-user/',
          TasksCreatedFinishedByUserView.as_view(),
          name='tasks-created-finished-by-user'
     ),
-    path('activities-by-responsible/',
+    path('export-activities-by-responsible/',
          ActivitiesByResponsibleView.as_view(),
          name='activities-by-responsible'
     ),
-    path('late-tasks/', 
+    path('export-late-tasks/', 
          LateTasksView.as_view(),
          name='late-tasks'
     ),

@@ -143,7 +143,6 @@ class ExportData(APIView):
 
         return content, 'text/plain; charset=utf-8'
 
-
 class TasksCreatedFinishedByUserView(APIView):
 
     def get(self, request):
@@ -174,39 +173,78 @@ class TasksCreatedFinishedByUserView(APIView):
                 'tasks_finished': finished_task_count
             })
         
-        return Response(output_data)
-    
+        return self.create_excel(output_data, "All Users Tasks")
+
     def get_filter(self, request):
         created_by = request.GET.get('created_by')
         finished_by = request.GET.get('finished_by')
 
-        # Inicializa os contadores (teste)
+        # Inicializa os contadores
         created_task_count = 0
         finished_task_count = 0
         
-        # Filtro para contar as tarefas criadas pelo usuário, se fornecido (lapidação)
+        # Filtro para contar as tarefas criadas pelo usuário, se fornecido
         if created_by:
             created_tasks = TaskProfile.objects.filter(created_by_id=created_by)
             created_task_count = created_tasks.count()
         
-        # Filtro para contar as tarefas finalizadas pelo usuário, se fornecido(lapidação)
+        # Filtro para contar as tarefas finalizadas pelo usuário, se fornecido
         if finished_by:
             finished_tasks = TaskProfile.objects.filter(finished_by_id=finished_by)
             finished_task_count = finished_tasks.count()
         
-        return Response({
+        output_data = [{
             "total_tasks_created_by_user": created_task_count,
             "total_tasks_finished_by_user": finished_task_count
-        })
+        }]
+
+        return self.create_excel(output_data, "Filtered Tasks")
+
+    def create_excel(self, data, sheet_name):
+        # Criar um arquivo Excel
+        wb = Workbook()
+        ws = wb.active
+        ws.title = sheet_name
+
+        # Adicionar os cabeçalhos
+        if sheet_name == "All Users Tasks":
+            ws.append(["ID", "Name", "Tasks Created", "Tasks Finished"])
+        else:
+            ws.append(["Total Tasks Created by User", "Total Tasks Finished by User"])
+
+        # Adicionar os dados
+        for item in data:
+            ws.append(list(item.values()))
+
+        # Salvar o arquivo Excel em um objeto HttpResponse
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = f'attachment; filename={sheet_name.lower().replace(" ", "_")}.xlsx'
+        wb.save(response)
+
+        return response
         
 class ActivitiesByResponsibleView(APIView):
 
-    def get(self, request, format=None): 
+    def get(self, request, format=None):
         # Quantidade de atividades por responsável
-        # Como seria boas práticas para não deixar tão grande?
-        responsible_tasks = User.objects.annotate(task_count=Count('tasks_responsible')).values('id', 'name', 'task_count').order_by('-task_count')
+        responsible_tasks = User.objects.annotate(
+            task_count=Count('tasks_responsible')
+        ).values('id', 'name', 'task_count').order_by('-task_count')
 
-        return Response(responsible_tasks) # Retorno dos dados
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Activities by Responsible"
+
+        ws.append(["ID", "Name", "Task Count"])
+
+        for user_task in responsible_tasks:
+            ws.append([user_task['id'], user_task['name'], user_task['task_count']])
+
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = 'attachment; filename=activities_by_responsible.xlsx'
+        wb.save(response)
+
+        return response
     
 class LateTasksView(APIView):
 
@@ -215,11 +253,24 @@ class LateTasksView(APIView):
 
         # Aggregate o número de tarefas atrasadas para cada usuário
         late_tasks = User.objects.annotate(
-            late_count=Count('tasks_responsible', filter=Q(tasks_responsible__deadline__lt=current_date, tasks_responsible__completed=False)), # Número de tarefas não completadas
-            finished_late_count=Count('tasks_responsible', filter=Q(tasks_responsible__deadline__lt=F('tasks_responsible__finished_in'))) 
-        ).values('id', 'name', 'late_count', 'finished_late_count') # Finalizadas fora do prazo
+            late_count=Count('tasks_responsible', filter=Q(tasks_responsible__deadline__lt=current_date, tasks_responsible__completed=False)),  # Número de tarefas não completadas
+            finished_late_count=Count('tasks_responsible', filter=Q(tasks_responsible__deadline__lt=F('tasks_responsible__finished_in')))  # Finalizadas fora do prazo
+        ).values('id', 'name', 'late_count', 'finished_late_count')
 
-        return Response(late_tasks)
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Late Tasks"
+        
+        ws.append(["ID", "Name", "Late Count", "Finished Late Count"])
+
+        for user_task in late_tasks:
+            ws.append([user_task['id'], user_task['name'], user_task['late_count'], user_task['finished_late_count']])
+
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = 'attachment; filename=late_tasks.xlsx'
+        wb.save(response)
+
+        return response
 
 class UserFinishedOwnTasksView(APIView):
 
@@ -229,19 +280,15 @@ class UserFinishedOwnTasksView(APIView):
             own_finished_count=Count('tasks_responsible', filter=Q(tasks_responsible__finished_by=F('pk')))
         ).values('id', 'name', 'own_finished_count')
 
-        # Criar um arquivo Excel
         wb = Workbook()
         ws = wb.active
         ws.title = "Terminaram suas tarefas"
 
-        # Adicionar os cabeçalhos
         ws.append(["ID", "Name", "Own Finished Count"])
 
-        # Adicionar os dados
         for user_task in user_finished_own_tasks:
             ws.append([user_task['id'], user_task['name'], user_task['own_finished_count']])
 
-        # Salvar o arquivo Excel em um objeto HttpResponse
         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
         response['Content-Disposition'] = 'attachment; filename=user_finished_own_tasks.xlsx'
         wb.save(response)
@@ -257,19 +304,15 @@ class UserCreatedAndFinishedTasksView(APIView):
             created_and_finished_count=Count('task_profiles_created', filter=Q(task_profiles_created__finished_by=F('pk'))) # Acessando o valor da chave primária.
         ).values('id', 'name', 'created_and_finished_count')
 
-        # Criar um arquivo Excel
         wb = Workbook()
         ws = wb.active
         ws.title = "User Created and Finished Tasks"
 
-        # Adicionar os cabeçalhos
         ws.append(["ID", "Name", "Created and Finished Count"])
 
-        # Adicionar os dados
         for user_task in user_created_and_finished_tasks:
             ws.append([user_task['id'], user_task['name'], user_task['created_and_finished_count']])
 
-        # Salvar o arquivo Excel em um objeto HttpResponse
         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
         response['Content-Disposition'] = 'attachment; filename=user_created_and_finished_tasks.xlsx'
         wb.save(response)
