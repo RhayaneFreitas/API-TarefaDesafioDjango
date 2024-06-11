@@ -13,13 +13,11 @@ from django.urls import(
 )
 from api.apps.task.views.user import (
     ExportData,
-    TasksCreatedFinishedByUser,
-    ActivitiesByResponsible,
-    LateTasks,
-    UserFinishedOwnTasks,
+    TasksCreatedFinishedByUserView,
+    ActivitiesByResponsibleView,
+    LateTasksView,
+    UserFinishedOwnTasksView,
     UserCreatedAndFinishedTasksView
-    
-
     
 )
 
@@ -55,29 +53,28 @@ urlpatterns = [
          name='exportdata'
     ),
     path('tasks-created-finished-by-user/',
-         TasksCreatedFinishedByUser.as_view(),
+         TasksCreatedFinishedByUserView.as_view(),
          name='tasks-created-finished-by-user'
     ),
     path('activities-by-responsible/',
-         ActivitiesByResponsible.as_view(),
+         ActivitiesByResponsibleView.as_view(),
          name='activities-by-responsible'
     ),
     path('late-tasks/', 
-         LateTasks.as_view(),
+         LateTasksView.as_view(),
          name='late-tasks'
     ),
-    path('user-finished-own-tasks/',
-         UserFinishedOwnTasks.as_view(),
-         name='user-finished-own-tasks'
-    ),
-    path('user-created-and-finished-tasks/',
+    path('export-user-created-and-finished-tasks/',
          UserCreatedAndFinishedTasksView.as_view(),
          name='user-created-and-finished-tasks'
     ),
+    path('export-user-finished-own-tasks/', 
+         UserFinishedOwnTasksView.as_view(),
+         name='export_user_tasks'
+    ),
+
     
 ]
-
-
 
 """Antes das Melhorias:
 
@@ -112,6 +109,11 @@ path('export_data/<int:pk>/<slug:slug>/',ExportData.as_view(), name='exportdata'
     # path('export-report/<str:report_type>/',
     #      TaskReportFilters.as_view(),
     #      name='task_report_filters' 
+    # ),
+    
+    # path('user-finished-own-tasks/',
+    #      UserFinishedOwnTasksView.as_view(),
+    #      name='user-finished-own-tasks'
     # ),
 
 

@@ -257,7 +257,24 @@ class UserCreatedAndFinishedTasksView(APIView):
             created_and_finished_count=Count('task_profiles_created', filter=Q(task_profiles_created__finished_by=F('pk'))) # Acessando o valor da chave primária.
         ).values('id', 'name', 'created_and_finished_count')
 
-        return Response(user_created_and_finished_tasks)
+        # Criar um arquivo Excel
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "User Created and Finished Tasks"
+
+        # Adicionar os cabeçalhos
+        ws.append(["ID", "Name", "Created and Finished Count"])
+
+        # Adicionar os dados
+        for user_task in user_created_and_finished_tasks:
+            ws.append([user_task['id'], user_task['name'], user_task['created_and_finished_count']])
+
+        # Salvar o arquivo Excel em um objeto HttpResponse
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = 'attachment; filename=user_created_and_finished_tasks.xlsx'
+        wb.save(response)
+
+        return response
 
 
 class TaskViewsSet(viewsets.ModelViewSet):
