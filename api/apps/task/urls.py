@@ -16,7 +16,8 @@ from api.apps.task.views.user import (
     TasksCreatedFinishedByUser,
     ActivitiesByResponsible,
     LateTasks,
-    UserFinishedOwnTasks
+    UserFinishedOwnTasks,
+    UserCreatedAndFinishedTasksView
     
 
     
@@ -68,6 +69,10 @@ urlpatterns = [
     path('user-finished-own-tasks/',
          UserFinishedOwnTasks.as_view(),
          name='user-finished-own-tasks'
+    ),
+    path('user-created-and-finished-tasks/',
+         UserCreatedAndFinishedTasksView.as_view(),
+         name='user-created-and-finished-tasks'
     ),
     
 ]
