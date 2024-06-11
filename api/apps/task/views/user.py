@@ -141,113 +141,6 @@ class ExportData(APIView):
 
         return content, 'text/plain; charset=utf-8'
 
-class TaskReportFilters(APIView):
-    
-    def get(self, request, report_type):
-        serializer = TaskReportFilterSerializer(data=request.GET)
-        if serializer.is_valid():
-            filters = serializer.get_filters()
-            tasks = TaskProfile.objects.filter(filters)
-
-            report_types = {
-                'created_and_finished_by_user': self.created_and_finished_by_user,
-                'activites_by_responsible': self.activities_by_responsible,
-                'activites_completed_after_the_deadline': self.activites_completed_after_the_dealine
-            }
-
-            try:
-                data = report_types[report_type](tasks)
-                
-                return Response(data, status=status.HTTP_200_OK)
-            
-            except KeyError:
-                return Response({'Release': 'O tipo de relatório fornecido é inválido.'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def created_and_finished_by_user(self, tasks):
-        created = tasks.values('created_by__user').annotate(total_created=Count('id'))
-        finished = tasks.filter(completed=True).values('finished_by__user').annotate(total_finished=Count('id'))
-
-        data = {
-            'created_by_user': list(created),
-            'finished_by_user': list(finished)
-        }
-        return data
-
-    def activities_by_responsible(self, tasks):
-    # Gerar Lista de tarefas que possuem mais de 1 responsavel:
-         # list_activities_by_autor = tasks.objects.annotate(num_responsible=Count("responsible")).filter(num_responsible__gt=1)
-        
-        activities_by_responsible = tasks.values('responsible__user').annotate(total_activities=Count('id'))
-
-        data = {
-            'activities_by_responsible': list(activities_by_responsible)
-            
-        }
-        return data
-
-    def activites_completed_after_the_dealine(self, tasks):
-        today = date.today()
-        late = tasks.filter(completed=False, deadline__lt=today).count()
-        completed_after_deadline = tasks.filter(completed=True, finished_in__date__gt=F('deadline')).count()
-
-        data = {
-            'late_tasks': late,
-            'activities_completed_after_the_deadline': completed_after_deadline
-        }
-        return data
-    
-    
-# Atividade: Separar as atividades por Classe:
-# class BaseReport:
-#     def __init__(self, tasks):
-#         self.tasks = tasks
-
-#     def generate_report(self):
-#         raise NotImplementedError # -> Deve implementar na subclasse
-
-# class CreatedAndFinishedByUserReport(BaseReport):
-#     def generate_report(self):
-#         created = self.tasks.values('created_by__user').annotate(total_created=Count('id'))
-#         finished = self.tasks.filter(completed=True).values('finished_by__user').annotate(total_finished=Count('id'))
-
-#         data = {
-#             'created_by_user': list(created),
-#             'finished_by_user': list(finished)
-#         }
-#         return data
-
-# class ActivitiesByResponsibleReport(BaseReport):
-#     def generate_report(self):
-#         activities_by_responsible = self.tasks.values('responsible__user').annotate(total_activities=Count('id'))
-
-#         data = {
-#             'activities_by_responsible': list(activities_by_responsible)
-#         }
-#         return data
-
-# class ActivitiesCompletedAfterDeadlineReport(BaseReport):
-#     def generate_report(self):
-#         today = date.today()
-#         late = self.tasks.filter(completed=False, deadline__lt=today).count()
-#         completed_after_deadline = self.tasks.filter(completed=True, finished_in__date__gt=F('deadline')).count()
-
-#         data = {
-#             'late_tasks': late,
-#             'activities_completed_after_the_deadline': completed_after_deadline
-#         }
-#         return data    
-    
-
-class TaskViewsSet(viewsets.ModelViewSet):
-    serializer_class = TasksSerializer
-    queryset = task.TaskProfile.objects.all()
-    # filter_backends = (filters.SearchFilter,) simples
-    # search_fields = ('title', 'release')
-    filter_backends = [DjangoFilterBackend] 
-    filterset_fields = ['created_in', 'finished_in']
-
 
 class TasksCreatedFinishedByUser(APIView):
 
@@ -304,7 +197,13 @@ class TasksCreatedFinishedByUser(APIView):
             "total_tasks_finished_by_user": finished_task_count
         })
 
-
+class TaskViewsSet(viewsets.ModelViewSet):
+    serializer_class = TasksSerializer
+    queryset = task.TaskProfile.objects.all()
+    # filter_backends = (filters.SearchFilter,) simples
+    # search_fields = ('title', 'release')
+    filter_backends = [DjangoFilterBackend] 
+    filterset_fields = ['created_in', 'finished_in']
 # ---------------------------------------------------------------------------------------------------------------------------------
 
     
