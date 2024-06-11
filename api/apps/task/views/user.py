@@ -220,6 +220,17 @@ class LateTasks(APIView):
 
         return Response(late_tasks)
 
+class UserFinishedOwnTasks(APIView):
+
+    def get(self, request, format=None):
+        # Aggregate the number of tasks where the user was responsible and also finished the task
+        user_finished_own_tasks = User.objects.annotate(
+            own_finished_count=Count('tasks_responsible', filter=Q(tasks_responsible__finished_by=F('pk')))
+        ).values('id', 'name', 'own_finished_count')
+
+        return Response(user_finished_own_tasks)
+
+
 class TaskViewsSet(viewsets.ModelViewSet):
     serializer_class = TasksSerializer
     queryset = task.TaskProfile.objects.all()
