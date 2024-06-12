@@ -142,6 +142,9 @@ class TaskResponsible(models.Model):
         on_delete=models.PROTECT,
         verbose_name=_('User')
     )
+    
+    class Meta:
+        unique_together = [['task', 'user']]
 
     def __str__(self):
         return f"{self.user} - {self.task}"
