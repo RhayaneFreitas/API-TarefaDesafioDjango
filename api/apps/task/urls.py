@@ -48,32 +48,45 @@ urlpatterns = [
     path('',
          include(route.urls)
     ),
-    path('export_data/',
+    path(
+        'export_data/',
          ExportData.as_view(),
          name='exportdata'
     ),
-    path('export-tasks-created-finished-by-user/',
-         TasksCreatedFinishedByUserView.as_view(),
-         name='tasks-created-finished-by-user'
-    ),
-    path('export-activities-by-responsible/',
-         ActivitiesByResponsibleView.as_view(),
-         name='activities-by-responsible'
-    ),
-    path('export-late-tasks/', 
-         LateTasksView.as_view(),
-         name='late-tasks'
-    ),
-    path('export-user-created-and-finished-tasks/',
-         UserCreatedAndFinishedTasksView.as_view(),
-         name='user-created-and-finished-tasks'
-    ),
-    path('export-user-finished-own-tasks/', 
-         UserFinishedOwnTasksView.as_view(),
-         name='export_user_tasks'
+    path('export/',
+         include(
+             [
+                 path(
+                    'user-finished-own-tasks/',
+                    UserFinishedOwnTasksView.as_view(),
+                     name='export_user_tasks'
+                 ),
+                path(
+                    'user-created-and-finished-tasks/',
+                    UserCreatedAndFinishedTasksView.as_view(),
+                    name='user-created-and-finished-tasks'
+                ),
+                path(
+                    'late-tasks/', 
+                    LateTasksView.as_view(),
+                    name='late-tasks'
+                ),
+                path(
+                    'activities-by-responsible/',
+                    ActivitiesByResponsibleView.as_view(),
+                    name='activities-by-responsible'
+                ),
+                path(
+                    'tasks-created-finished-by-user/',
+                    TasksCreatedFinishedByUserView.as_view(),
+                    name='tasks-created-finished-by-user'
+                ),
+                    
+             ]
+         )
+        
     ),
 
-    
 ]
 
 """Antes das Melhorias:
@@ -114,6 +127,31 @@ path('export_data/<int:pk>/<slug:slug>/',ExportData.as_view(), name='exportdata'
     # path('user-finished-own-tasks/',
     #      UserFinishedOwnTasksView.as_view(),
     #      name='user-finished-own-tasks'
+    # ),
+        # path(
+    #     'export-tasks-created-finished-by-user/',
+    #      TasksCreatedFinishedByUserView.as_view(),
+    #      name='tasks-created-finished-by-user'
+    # ),
+    # path(
+    #     'export-activities-by-responsible/',
+    #      ActivitiesByResponsibleView.as_view(),
+    #      name='activities-by-responsible'
+    # ),
+    # path(
+    #     'export-late-tasks/', 
+    #      LateTasksView.as_view(),
+    #      name='late-tasks'
+    # ),
+    # path(
+    #     'export-user-created-and-finished-tasks/',
+    #      UserCreatedAndFinishedTasksView.as_view(),
+    #      name='user-created-and-finished-tasks'
+    # ),
+    # path(
+    #     'export-user-finished-own-tasks/', 
+    #      UserFinishedOwnTasksView.as_view(),
+    #      name='export_user_tasks'
     # ),
 
 
