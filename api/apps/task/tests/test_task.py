@@ -38,8 +38,8 @@ class TaskProfileTestCase(TestCase):
 # Teste Lógica:
 class TaskResponsibleTestCase(TestCase):
     def setUp(self):
-        self.task = TaskProfile.objects.create(name='Task 1')
-        self.user = User.objects.create(username='user1')
+        self.task = TaskProfile.objects.create(title='Task 1')
+        self.user = User.objects.create(username='user1@hotmail.com')
 
     def test_unique_together(self):
         # Cria o primeiro registro, que deve ser bem-sucedido
