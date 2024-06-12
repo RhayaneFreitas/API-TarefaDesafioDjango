@@ -1,8 +1,9 @@
 from django.test import TestCase
 from django.contrib.auth.models import User
 from api.apps.task.models import TaskProfile
-from api.apps.task.models import task
+from api.apps.task.models.task import TaskResponsible
 from django.contrib.auth import get_user_model
+from django.db.utils import IntegrityError
 
 
 class TaskProfileTestCase(TestCase):
@@ -33,3 +34,17 @@ class TaskProfileTestCase(TestCase):
         )
         self.assertEqual(task_responsible.task, task)
         self.assertEqual(task_responsible.user, self.user)
+
+# Teste Lógica:
+class TaskResponsibleTestCase(TestCase):
+    def setUp(self):
+        self.task = TaskProfile.objects.create(name='Task 1')
+        self.user = User.objects.create(username='user1')
+
+    def test_unique_together(self):
+        # Cria o primeiro registro, que deve ser bem-sucedido
+        TaskResponsible.objects.create(task=self.task, user=self.user)
+
+        # Tenta criar um segundo registro com o mesmo task e user
+        with self.assertRaises(IntegrityError):
+            TaskResponsible.objects.create(task=self.task, user=self.user)
