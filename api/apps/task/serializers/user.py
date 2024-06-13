@@ -1,7 +1,6 @@
 from rest_framework import serializers
 from api.apps.task.models import (
     TaskProfile,
-    #TaskResponsible
 )
 from django.db.models import Q
 from api.apps.task.models import task
@@ -59,7 +58,6 @@ class TasksSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {
                     'Release:': _("O ano não pode ser anterior ao ano de 2000.")
-                    
                 }
             )
         return verification
@@ -69,7 +67,6 @@ class TasksSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {
                     'Release:': _("O ano não pode ser anterior ao ano de 2000.")
-                    
                 }
             )
         return verification
@@ -106,28 +103,6 @@ class TasksSerializer(serializers.ModelSerializer):
                 }
             )
         return value
-    
-    # def validate(self, data):
-    #     created_date = data.get('created_in')
-    #     finished_date = data.get('finished_in')
-        
-    #     if created_date and finished_date:
-    #         difference = created_date - finished_date
-    #         if difference.days > 365:
-    #             raise serializers.ValidationError(
-    #                 {
-    #                     'Release': _("O período entre as datas não pode ser maior que 365 dias.")
-    #                 }
-    #             )
-
-    #     elif created_date or finished_date:
-    #         raise serializers.ValidationError(
-    #             {
-    #                 'Release': _("data de criação e data final são obrigatórios.")
-    #             }
-    #         )
-        
-    #     return data
 
 # Tentando refinar o Código:
 class TaskReportFilterSerializer(serializers.Serializer):
@@ -156,26 +131,18 @@ class TaskReportFilterSerializer(serializers.Serializer):
         if created_in and finished_in:
             if (finished_in - created_in).days > 365:
                 raise serializers.ValidationError(
-                    _("O período entre as datas não pode ser maior que 365 dias.")
+                    {
+                        "detail":_("O período entre as datas não pode ser maior que 365 dias.")
+                    }
                 )
         else:
             raise serializers.ValidationError(
-                _("As datas de criação e finalização são obrigatórias.")
+                {
+                    "detail": _("As datas de criação e finalização são obrigatórias.")
+                }
             )
         
-        return data
-
-    # def get_filters(self):
-    #     filters = Q(deadline__gte=self.validated_data['created_in']) & Q(deadline__lte=self.validated_data['finished_in'])
-
-    #     if self.validated_data.get('created_by'):
-    #         filters &= Q(created_by__id=self.validated_data['created_by'])
-    #     if self.validated_data.get('finished_by'):
-    #         filters &= Q(finished_by__id=self.validated_data['finished_by'])
-    #     if self.validated_data.get('responsible'):
-    #         filters &= Q(responsible__id=self.validated_data['responsible'])
-
-    #     return filters    
+        return data  
     
 class TaskResponsibleSerializer(serializers.ModelSerializer):
     class Meta:
