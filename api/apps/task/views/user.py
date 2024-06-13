@@ -146,18 +146,23 @@ class ExportData(APIView):
 class TasksCreatedFinishedByUserView(APIView):
 
     def get(self, request):
+        format = request.GET.get('formato')
+        
+        if format == 'excel':
+            return self.export_to_excel()
+        elif format == 'json':
+            return self.export_to_json()
         # Se os parâmetros de filtro não estiverem presentes, retornar todos os dados
-        if not request.GET.get('created_by') and not request.GET.get('finished_by'):
+        elif not request.GET.get('created_by') and not request.GET.get('finished_by'):
             return self.get_all_data(request)
         # Caso contrário, aplicar filtro
         else:
             return self.get_filter(request)
 
     def get_all_data(self, request):
-        # Obtém todos os usuários
+        
         users = User.objects.all()
         
-        # Inicializa a lista para armazenar os dados de saída
         output_data = []
         
         # Para cada usuário, conta as tarefas criadas e finalizadas
@@ -173,7 +178,7 @@ class TasksCreatedFinishedByUserView(APIView):
                 'tasks_finished': finished_task_count
             })
         
-        return self.create_excel(output_data, "All Users Tasks")
+        return Response(output_data)
 
     def get_filter(self, request):
         created_by = request.GET.get('created_by')
@@ -185,47 +190,68 @@ class TasksCreatedFinishedByUserView(APIView):
         
         # Filtro para contar as tarefas criadas pelo usuário, se fornecido
         if created_by:
-            created_tasks = TaskProfile.objects.filter(created_by_id=created_by)
-            created_task_count = created_tasks.count()
+            created_task_count = TaskProfile.objects.filter(created_by_id=created_by).count()
         
         # Filtro para contar as tarefas finalizadas pelo usuário, se fornecido
         if finished_by:
-            finished_tasks = TaskProfile.objects.filter(finished_by_id=finished_by)
-            finished_task_count = finished_tasks.count()
+            finished_task_count = TaskProfile.objects.filter(finished_by_id=finished_by).count()
         
-        output_data = [{
+        output_data = {
             "total_tasks_created_by_user": created_task_count,
             "total_tasks_finished_by_user": finished_task_count
-        }]
+        }
 
-        return self.create_excel(output_data, "Filtered Tasks")
-
-    def create_excel(self, data, sheet_name):
-        # Criar um arquivo Excel
+        return Response(output_data)
+    
+    def export_to_excel(self):
+        users = User.objects.all()
         wb = Workbook()
         ws = wb.active
-        ws.title = sheet_name
+        ws.title = "Tasks Created and Finished by User Report"
+        ws.append(["ID", "Name", "Tasks Created", "Tasks Finished"])
 
-        # Adicionar os cabeçalhos
-        if sheet_name == "All Users Tasks":
-            ws.append(["ID", "Name", "Tasks Created", "Tasks Finished"])
-        else:
-            ws.append(["Total Tasks Created by User", "Total Tasks Finished by User"])
+        for user in users:
+            created_task_count = TaskProfile.objects.filter(created_by=user).count()
+            finished_task_count = TaskProfile.objects.filter(finished_by=user).count()
 
-        # Adicionar os dados
-        for item in data:
-            ws.append(list(item.values()))
+            ws.append([user.id, user.name, created_task_count, finished_task_count])
 
-        # Salvar o arquivo Excel em um objeto HttpResponse
         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        response['Content-Disposition'] = f'attachment; filename={sheet_name.lower().replace(" ", "_")}.xlsx'
+        response['Content-Disposition'] = 'attachment; filename=tasks_created_finished_by_user_report.xlsx'
         wb.save(response)
 
         return response
+
+    def export_to_json(self):
+        users = User.objects.all()
+        output_data = []
+
+        for user in users:
+            created_task_count = TaskProfile.objects.filter(created_by=user).count()
+            finished_task_count = TaskProfile.objects.filter(finished_by=user).count()
+
+            output_data.append({
+                'id': user.id,
+                'name': user.name,
+                'tasks_created': created_task_count,
+                'tasks_finished': finished_task_count
+            })
+
+        return Response(output_data)
         
 class ActivitiesByResponsibleView(APIView):
 
-    def get(self, request, format=None):
+    def get(self, request):
+        format = request.GET.get('formato')
+
+        if format == 'excel':
+            return self.export_to_excel()
+        elif format == 'json':
+            return self.export_to_json()
+        else:
+            return Response({"detail": "Formato não suportado."}, status=status.HTTP_400_BAD_REQUEST)
+
+    def export_to_excel(self):
         # Quantidade de atividades por responsável
         responsible_tasks = User.objects.annotate(
             task_count=Count('tasks_responsible')
@@ -234,7 +260,6 @@ class ActivitiesByResponsibleView(APIView):
         wb = Workbook()
         ws = wb.active
         ws.title = "Activities by Responsible"
-
         ws.append(["ID", "Name", "Task Count"])
 
         for user_task in responsible_tasks:
@@ -245,110 +270,163 @@ class ActivitiesByResponsibleView(APIView):
         wb.save(response)
 
         return response
+
+    def export_to_json(self):
+        # Quantidade de atividades por responsável
+        responsible_tasks = User.objects.annotate(
+            task_count=Count('tasks_responsible')
+        ).values('id', 'name', 'task_count').order_by('-task_count')
+
+
+        data = list(responsible_tasks)
+
+        return Response(data)
     
 class LateTasksView(APIView):
 
-    def get(self, request, format=None):
+    def get(self, request):
         current_date = timezone.now().date()
+        format = request.GET.get('formato')
 
-        # Aggregate o número de tarefas atrasadas para cada usuário
+        # Consulta para obter o número de tarefas atrasadas para cada usuário
         late_tasks = User.objects.annotate(
-            late_count=Count('tasks_responsible', filter=Q(tasks_responsible__deadline__lt=current_date, tasks_responsible__completed=False)),  # Número de tarefas não completadas
-            finished_late_count=Count('tasks_responsible', filter=Q(tasks_responsible__deadline__lt=F('tasks_responsible__finished_in')))  # Finalizadas fora do prazo
+            late_count=Count('tasks_responsible', filter=Q(tasks_responsible__deadline__lt=current_date, tasks_responsible__completed=False)),
+            finished_late_count=Count('tasks_responsible', filter=Q(tasks_responsible__deadline__lt=F('tasks_responsible__finished_in')))
         ).values('id', 'name', 'late_count', 'finished_late_count')
+
+        if format == 'excel':
+            return self.export_to_excel(late_tasks)
+        elif format == 'json':
+            return self.export_to_json(late_tasks)
+        else:
+            return Response({"detail": "Formato não suportado."}, status=status.HTTP_400_BAD_REQUEST)
+
+    def export_to_excel(self, late_tasks):
 
         wb = Workbook()
         ws = wb.active
-        ws.title = "Late Tasks"
-        
+        ws.title = "Late Tasks Report"
         ws.append(["ID", "Name", "Late Count", "Finished Late Count"])
 
-        for user_task in late_tasks:
-            ws.append([user_task['id'], user_task['name'], user_task['late_count'], user_task['finished_late_count']])
+        for task in late_tasks:
+            ws.append([task['id'], task['name'], task['late_count'], task['finished_late_count']])
 
         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        response['Content-Disposition'] = 'attachment; filename=late_tasks.xlsx'
+        response['Content-Disposition'] = 'attachment; filename=late_tasks_report.xlsx'
         wb.save(response)
 
         return response
 
+    def export_to_json(self, late_tasks):
+
+        data = list(late_tasks)
+
+        return Response(data)
+
 class UserFinishedOwnTasksView(APIView):
 
-    def get(self, request, format=None):
-        # Obter o número de tarefas que o usuário foi responsável e também finalizou a tarefa
+    def get(self, request):
+        format = request.GET.get('formato')
+        # Obter o número de tarefas que o usuário foi responsável e finalizou
         user_finished_own_tasks = User.objects.annotate(
             own_finished_count=Count('tasks_responsible', filter=Q(tasks_responsible__finished_by=F('pk')))
         ).values('id', 'name', 'own_finished_count')
 
+        if format == 'excel':
+            return self.export_to_excel(user_finished_own_tasks)
+        elif format == 'json':
+            return self.export_to_json(user_finished_own_tasks)
+        else:
+            return Response({"detail": "Formato não suportado."}, status=status.HTTP_400_BAD_REQUEST)
+
+    def export_to_excel(self, user_finished_own_tasks):
+ 
         wb = Workbook()
         ws = wb.active
-        ws.title = "Terminaram suas tarefas"
-
+        ws.title = "User Finished Own Tasks Report"
         ws.append(["ID", "Name", "Own Finished Count"])
 
         for user_task in user_finished_own_tasks:
             ws.append([user_task['id'], user_task['name'], user_task['own_finished_count']])
 
         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        response['Content-Disposition'] = 'attachment; filename=user_finished_own_tasks.xlsx'
+        response['Content-Disposition'] = 'attachment; filename=user_finished_own_tasks_report.xlsx'
         wb.save(response)
 
         return response
 
+    def export_to_json(self, user_finished_own_tasks):
+ 
+        data = list(user_finished_own_tasks)
+
+        return Response(data)
     
 class UserCreatedAndFinishedTasksView(APIView):
 
-    def get(self, request, format=None):
+    def get(self, request):
+        format = request.GET.get('formato')
         # Quantas tarefas que o usuário estava como criador, foi ele quem finalizou a tarefa.
         user_created_and_finished_tasks = User.objects.annotate(
-            created_and_finished_count=Count('task_profiles_created', filter=Q(task_profiles_created__finished_by=F('pk'))) # Acessando o valor da chave primária.
+            created_and_finished_count=Count('task_profiles_created', filter=Q(task_profiles_created__finished_by=F('pk')))
         ).values('id', 'name', 'created_and_finished_count')
-
+        
+        if format == 'excel':
+            return self.export_to_excel(user_created_and_finished_tasks)
+        elif format == 'json':
+            return self.export_to_json(user_created_and_finished_tasks)
+        else:
+            Response({"Detail": "Formato não suportado"}, status=status.HTTP_400_BAD_REQUEST)
+            
+    def export_to_excel(self, user_created_and_finished_tasks):
+ 
         wb = Workbook()
         ws = wb.active
-        ws.title = "User Created and Finished Tasks"
-
+        ws.title = "User Created and Finished Tasks Report"
         ws.append(["ID", "Name", "Created and Finished Count"])
 
         for user_task in user_created_and_finished_tasks:
             ws.append([user_task['id'], user_task['name'], user_task['created_and_finished_count']])
 
         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        response['Content-Disposition'] = 'attachment; filename=user_created_and_finished_tasks.xlsx'
+        response['Content-Disposition'] = 'attachment; filename=user_created_and_finished_tasks_report.xlsx'
         wb.save(response)
 
         return response
 
+    def export_to_json(self, user_created_and_finished_tasks):
+
+        data = list(user_created_and_finished_tasks)
+
+        return Response(data)
 
 class TaskViewsSet(viewsets.ModelViewSet):
     serializer_class = TasksSerializer
     queryset = task.TaskProfile.objects.all()
     filter_backends = [DjangoFilterBackend] 
     filterset_fields = ['created_in', 'finished_in']
+    
+    
 # ---------------------------------------------------------------------------------------------------------------------------------
 
-    
-    # def get_excel(self, serializer):
+# class ExcelExportView:
+#     def create_excel(self, data, headers, filename):
+#         # Criar um arquivo Excel em memória
+#         wb = Workbook()
+#         ws = wb.active
+#         ws.title = filename
 
-    #     wb = Workbook() # -> Permite ler e Escrever Arquivo em Excel
-    #     ws = wb.active # Representa o Arquivo em Excel
+#         # Adicionar os cabeçalhos
+#         ws.append(headers)
 
-    #     # Adiciona os cabeçalhos
-    #     headers = ["Titulo", "Descricao", "Prazo", "Data de Lançamento", "Concluida", 
-    #                "Finalizada Em", "Finalizada Por", "Criada Em", "Atualizada", "Responsavel"]
-    #     ws.append(headers)
+#         # Adicionar os dados
+#         for item in data:
+#             ws.append(list(item.values()))
 
-    #     # Adiciona os dados
-    #     for task in serializer.data: # Tentar lapidar, Fernando não gosta de for.
-    #         ws.append([
-    #             task["title"], task["description"], task["deadline"], task["release"], task["completed"], 
-    #             task["finished_in"], task["finished_by"], task["created_in"], task["updated"], task["responsible"]
-    #         ])
+#         # Criar a resposta HTTP com o conteúdo do arquivo Excel
+#         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+#         response['Content-Disposition'] = f'attachment; filename={filename}.xlsx'
 
-    #     # Salva o arquivo em um objeto de bytes
+#         # Salvar o workbook diretamente na resposta HTTP
+#         wb.save(response)
 
-    #     excel_file = BytesIO() # Manipula os dados binários como se forsse um arquivo.
-    #     wb.save(excel_file)
-    #     excel_file.seek(0) # Salva o conteúdo
-
-    #     return excel_file.read(), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' # Captura todo o conteúdo do Arquivo
+#         return response
