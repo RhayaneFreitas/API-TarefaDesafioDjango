@@ -26,6 +26,7 @@ from rest_framework.authentication import TokenAuthentication #Udemy
 from rest_framework import generics
 import django_filters.rest_framework # Filters
 from django_filters.rest_framework import DjangoFilterBackend
+from django.utils.translation import gettext_lazy as _
 
 # from api.apps.task.serializers import TasksSerializer
 from rest_framework import (
@@ -68,22 +69,33 @@ class TaskView(APIView):
         serializer = TasksSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(
+                serializer.data,
+                status=status.HTTP_201_CREATED
+            )
         
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            serializer.errors,
+            status=status.HTTP_400_BAD_REQUEST
+        )
     
     def put(self, request, pk):
         try:
             task = TaskProfile.objects.get(pk=pk)
         except TaskProfile.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                status=status.HTTP_404_NOT_FOUND
+            )
         
         serializer = TasksSerializer(task, data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
         
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            serializer.errors,
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
     def delete(self, request, pk):
         try:
@@ -114,7 +126,12 @@ class ExportData(APIView):
             return response
         
         except KeyError:
-            return Response({"detail": "Formato não suportado "},status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    "detail": _("Formato não suportado")
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
                
     def get_json(self, serializer):
@@ -208,7 +225,10 @@ class TasksCreatedFinishedByUserView(APIView):
         wb = Workbook()
         ws = wb.active
         ws.title = "Tasks Created and Finished by User Report"
-        ws.append(["ID", "Name", "Tasks Created", "Tasks Finished"])
+        ws.append(["ID",
+                   "Name",
+                   "Tasks Created",
+                   "Tasks Finished"])
 
         for user in users:
             created_task_count = TaskProfile.objects.filter(created_by=user).count()
@@ -249,7 +269,12 @@ class ActivitiesByResponsibleView(APIView):
         elif format == 'json':
             return self.export_to_json()
         else:
-            return Response({"detail": "Formato não suportado."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    "detail": _("Formato não suportado.")
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
     def export_to_excel(self):
         # Quantidade de atividades por responsável
@@ -260,7 +285,9 @@ class ActivitiesByResponsibleView(APIView):
         wb = Workbook()
         ws = wb.active
         ws.title = "Activities by Responsible"
-        ws.append(["ID", "Name", "Task Count"])
+        ws.append(["ID",
+                   "Name",
+                   "Task Count"])
 
         for user_task in responsible_tasks:
             ws.append([user_task['id'], user_task['name'], user_task['task_count']])
@@ -299,14 +326,22 @@ class LateTasksView(APIView):
         elif format == 'json':
             return self.export_to_json(late_tasks)
         else:
-            return Response({"detail": "Formato não suportado."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    "detail": _("Formato não suportado.")
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
     def export_to_excel(self, late_tasks):
 
         wb = Workbook()
         ws = wb.active
         ws.title = "Late Tasks Report"
-        ws.append(["ID", "Name", "Late Count", "Finished Late Count"])
+        ws.append(["ID",
+                   "Name",
+                   "Late Count",
+                   "Finished Late Count"])
 
         for task in late_tasks:
             ws.append([task['id'], task['name'], task['late_count'], task['finished_late_count']])
@@ -337,14 +372,21 @@ class UserFinishedOwnTasksView(APIView):
         elif format == 'json':
             return self.export_to_json(user_finished_own_tasks)
         else:
-            return Response({"detail": "Formato não suportado."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    "detail": _("Formato não suportado.")
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
     def export_to_excel(self, user_finished_own_tasks):
  
         wb = Workbook()
         ws = wb.active
         ws.title = "User Finished Own Tasks Report"
-        ws.append(["ID", "Name", "Own Finished Count"])
+        ws.append(["ID",
+                   "Name",
+                   "Own Finished Count"])
 
         for user_task in user_finished_own_tasks:
             ws.append([user_task['id'], user_task['name'], user_task['own_finished_count']])
@@ -375,14 +417,21 @@ class UserCreatedAndFinishedTasksView(APIView):
         elif format == 'json':
             return self.export_to_json(user_created_and_finished_tasks)
         else:
-            Response({"Detail": "Formato não suportado"}, status=status.HTTP_400_BAD_REQUEST)
+            Response(
+                {
+                    "Detail": _("Formato não suportado.")
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
             
     def export_to_excel(self, user_created_and_finished_tasks):
  
         wb = Workbook()
         ws = wb.active
         ws.title = "User Created and Finished Tasks Report"
-        ws.append(["ID", "Name", "Created and Finished Count"])
+        ws.append(["ID",
+                   "Name",
+                   "Created and Finished Count"])
 
         for user_task in user_created_and_finished_tasks:
             ws.append([user_task['id'], user_task['name'], user_task['created_and_finished_count']])
@@ -407,26 +456,3 @@ class TaskViewsSet(viewsets.ModelViewSet):
     
     
 # ---------------------------------------------------------------------------------------------------------------------------------
-
-# class ExcelExportView:
-#     def create_excel(self, data, headers, filename):
-#         # Criar um arquivo Excel em memória
-#         wb = Workbook()
-#         ws = wb.active
-#         ws.title = filename
-
-#         # Adicionar os cabeçalhos
-#         ws.append(headers)
-
-#         # Adicionar os dados
-#         for item in data:
-#             ws.append(list(item.values()))
-
-#         # Criar a resposta HTTP com o conteúdo do arquivo Excel
-#         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-#         response['Content-Disposition'] = f'attachment; filename={filename}.xlsx'
-
-#         # Salvar o workbook diretamente na resposta HTTP
-#         wb.save(response)
-
-#         return response
