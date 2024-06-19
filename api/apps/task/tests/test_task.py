@@ -17,7 +17,7 @@ class TaskProfileTestCase(TestCase):
 
     def test_task_creation(self):
         task = TaskProfile.objects.create(
-            title='Test Task created',
+            title='teste1',
             created_by=self.user
         )
         self.assertEqual(task.title, 'Test Task')
@@ -25,7 +25,7 @@ class TaskProfileTestCase(TestCase):
 
     def test_task_responsible_creation(self):
         task = TaskProfile.objects.create(
-            title='Test Task created',
+            title='teste1',
             created_by=self.user
         )
         task_responsible = task.TaskResponsible.objects.create(
@@ -38,8 +38,8 @@ class TaskProfileTestCase(TestCase):
 # Teste Lógica:
 class TaskResponsibleTestCase(TestCase):
     def setUp(self):
-        self.task = TaskProfile.objects.create(title='Task 1')
-        self.user = User.objects.create(username='user1@hotmail.com')
+        self.task = TaskProfile.objects.create(title='teste1')
+        self.user = User.objects.create(username='fernando@hotmail.com')
 
     def test_unique_together(self):
         # Cria o primeiro registro, que deve ser bem-sucedido
