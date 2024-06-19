@@ -152,24 +152,20 @@ class TaskResponsibleSerializer(serializers.ModelSerializer):
             "task"   
         )
 
-class ActiviteByUserSerializer(serializers.Serializer):
+class IdNameSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.CharField()
+
+class ActiviteByUserSerializer(IdNameSerializer):
     task_count = serializers.IntegerField()
 
-class UserLateTasksSerializer(serializers.Serializer):
-    id = serializers.IntegerField()
-    name = serializers.CharField()
+class UserLateTasksSerializer(IdNameSerializer):
     late_count = serializers.IntegerField()
     finished_late_count = serializers.IntegerField()
-    
-class UserCreatedAndFinishedTasksSerializer(serializers.Serializer):
-    id = serializers.IntegerField()
-    name = serializers.CharField()
+
+class UserCreatedAndFinishedTasksSerializer(IdNameSerializer):
     created_and_finished_count = serializers.IntegerField()
-    
-class TasksByUserSerializer(serializers.Serializer):
-    id = serializers.IntegerField()
-    name = serializers.CharField()
+
+class TasksByUserSerializer(IdNameSerializer):
     tasks_created = serializers.IntegerField()
     tasks_finished = serializers.IntegerField()
