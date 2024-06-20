@@ -2,15 +2,7 @@ from rest_framework import serializers
 from api.apps.task.models import (
     TaskProfile,
 )
-from django.db.models import Q
 from api.apps.task.models import task
-from rest_framework import (
-    status,
-    viewsets,
-    filters,
-)
-
-from rest_framework.validators import UniqueValidator
 import re
 import datetime
 from django.utils.translation import gettext_lazy as _
@@ -38,6 +30,10 @@ class TasksSerializer(serializers.ModelSerializer):
         read_only_fields = (
             'id',
         )
+        extra_kwargs = {
+            'title': {'error_messages': {'required': 'O título é obrigatório.'}}
+        }
+        
     def validate_title(self, verification):
         if not verification:
             raise serializers.ValidationError(
@@ -104,7 +100,6 @@ class TasksSerializer(serializers.ModelSerializer):
             )
         return value
 
-# Tentando refinar o Código:
 class TaskReportFilterSerializer(serializers.Serializer):
     created_in = serializers.DateField(
         required=True

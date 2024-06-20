@@ -5,15 +5,20 @@ from django.contrib.auth import get_user_model
 class UsersModelsTests(TestCase):
     
     def test_create_user_with_email_successful(self):
-        email = 'testando@hotmail.com',
-        password='testando',
+        email = 'fernando@hotmail.com'
+        password='fernando'
+        name = 'fernando'
+        
         user = get_user_model().objects.create_user(
             email = email,
-            password = password
+            password = password,
+            name = name
         )
         
         self.assertEqual(user.email, email)
         self.assertTrue(user.check_password(password))
+        self.assertEqual(user.name, name)
+        
         
     def test_new_user_email_normalized(self):
         
@@ -35,8 +40,9 @@ class UsersModelsTests(TestCase):
     def test_create_superuser(self):
         """Test creating a superuser."""
         user = get_user_model().objects.create_superuser(
-            'test@example.com',
-            'test123',
+            'fernando@hotmail.com',
+            'fernando',
+            'fernando'
         )
         self.assertTrue(user.is_superuser)
         self.assertTrue(user.is_staff)

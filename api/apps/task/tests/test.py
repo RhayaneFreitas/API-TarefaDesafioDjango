@@ -1,19 +1,19 @@
 from rest_framework.test import APITestCase
 from rest_framework import status
 from django.urls import reverse
-from api.apps.task.models import TaskProfile
-from django.contrib.auth.models import (
-    User 
-)
 from datetime import date
+from django.contrib.auth import get_user_model
 
 # Testes estão sendo feitos nos serializers
 
 class TaskTest(APITestCase):
     
     def setUp(self):
-        self.user = User.objects.create_user(username='Rhayane', 
-            password='admin')
+        
+        User = get_user_model()
+        
+        self.user = User.objects.create_user(email='rhayane@hotmail.com',name='rhayane', 
+            password='rhayane')
         self.client.force_authenticate(user=self.user)    
     
     def test_permission_create_task_without_title(self): # Começar sempre com a palavra teste para ser executado
@@ -42,16 +42,20 @@ class TaskTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('deadline', response.data)
         self.assertEqual(response.data['deadline'][0], 'A data não pode ser anterior ao ano 2000')
-    
+
     def test_after_2000(self):
         url = reverse('task-list')
         data = {
-            'release' : '2000-01-01',
-            'deadline' :  '2000-01-01'
+            'release': '2000-01-01',
+            'deadline': '2000-01-01',
+            'title': 'teste1',
+            'created_by': self.user.pk
         }
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         
-'''
-
-'''
+        if response.status_code != status.HTTP_201_CREATED:
+            print(f"Request data: {data}")
+            print(f"Response status code: {response.status_code}")
+            print(f"Response data: {response.data}")
+        
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
