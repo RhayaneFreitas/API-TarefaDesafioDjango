@@ -1,5 +1,7 @@
 from openpyxl import Workbook
 from django.http import HttpResponse
+from weasyprint import HTML
+from django.template.loader import get_template
 
 class Report:
     def __init__(self, title, columns, data):
@@ -26,3 +28,22 @@ class ReportExcel(Report):
         workbook.save(response)
 
         return response 
+    
+class ReportPDF(Report):
+    def export(self):
+        # Gerar o conteúdo HTML do relatório usando um template
+        context = {
+            'title': self.title,
+            'columns': self.columns,
+            'data': self.data,
+        }
+        template = get_template('report_user_created_and_finished.html')  # Carrega o template HTML
+        html_content = template.render(context)  # Renderiza o template com os dados
+        
+        # Converter o HTML para PDF usando WeasyPrint
+        pdf_file = HTML(string=html_content).write_pdf()
+        
+        # Retornar o PDF como uma resposta HTTP
+        response = HttpResponse(pdf_file, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{self.title}.pdf"'
+        return response

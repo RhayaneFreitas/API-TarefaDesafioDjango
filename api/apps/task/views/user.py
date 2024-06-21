@@ -14,7 +14,10 @@ from api.apps.task.models import (
     TaskProfile,
     User,
     )
-from api.apps.task.reports import ReportExcel
+from api.apps.task.reports import (
+    ReportExcel,
+    ReportPDF
+)
 from api.apps.task.models import task
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils.translation import gettext_lazy as _
@@ -145,7 +148,8 @@ class ReportMixin:
         
         choices = {
             'excel': self.export_to_excel,
-            'json': self.export_to_json
+            'json': self.export_to_json,
+            'pdf': self.export_to_pdf
         }
         
         try:
@@ -170,6 +174,20 @@ class ReportMixin:
     
     def export_to_json(self, serializer):
         return Response(serializer.data)
+    
+    def export_to_pdf(self, serializer):
+        # Remove o campo 'id' dos dados
+        data = [
+            {key: value for key, value in item.items() if key != 'id'}
+            for item in serializer.data
+        ]
+        
+        # Supondo que 'ID' seja a representação do campo de coluna 'id'
+        columns = [column for column in self.columns if column.lower() != 'id']
+        
+        pdf = ReportPDF(self.title, columns, data)
+        return pdf.export()
+    
 
 class TasksCreatedFinishedByUserView(ReportMixin, APIView):
     
@@ -272,4 +290,3 @@ class TaskViewsSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend] 
     filterset_fields = ['created_in', 'finished_in']
 # ---------------------------------------------------------------------------------------------------------------------------------
-
