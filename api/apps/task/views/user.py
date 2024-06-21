@@ -251,7 +251,7 @@ class ActivitiesByResponsibleView(ReportMixin, APIView):
     queryset = User.objects.all()
     serializer = ActiviteByUserSerializer
     title = "Number of activities per person responsible"
-    columns = ["ID", "Name", "Activities by Responsible"]
+    columns = ["ID", "Name", "Activities By Responsible"]
     
     def get_queryset(self):
         return User.objects.annotate(
@@ -263,7 +263,7 @@ class LateTasksView(ReportMixin, APIView):
     queryset = User.objects.all()
     serializer = UserLateTasksSerializer
     title = "Late Tasks Report"
-    columns = ["ID", "name", "late_count", "finished_late_count"]
+    columns = ["ID", "Name", "Late Count", "Finished Late Count"]
     
     def get_queryset(self):
         current_date = timezone.now().date()
@@ -277,7 +277,7 @@ class UserCreatedAndFinishedTasksView(ReportMixin, APIView):
     queryset = User.objects.all()
     serializer = UserCreatedAndFinishedTasksSerializer
     title = "User Created and Finished Tasks Report"
-    columns = ["ID", "name", "created_and_finished_count"]
+    columns = ["ID", "Name", "Created And Finished Count"]
     
     def get_queryset(self):
         return User.objects.annotate(

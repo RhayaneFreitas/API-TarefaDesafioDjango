@@ -37,7 +37,7 @@ class ReportPDF(Report):
             'columns': self.columns,
             'data': self.data,
         }
-        template = get_template('report_user_created_and_finished.html')  # Carrega o template HTML
+        template = get_template('report_pdf.html')  # Carrega o template HTML
         html_content = template.render(context)  # Renderiza o template com os dados
         
         # Converter o HTML para PDF usando WeasyPrint
