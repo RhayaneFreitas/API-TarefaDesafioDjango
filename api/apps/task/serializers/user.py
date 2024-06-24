@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.contrib.auth import get_user_model
 from api.apps.task.models import (
     TaskProfile,
 )
@@ -6,6 +7,24 @@ from api.apps.task.models import task
 import re
 import datetime
 from django.utils.translation import gettext_lazy as _
+
+
+class UserSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = get_user_model()
+        fields = ('email',
+                  'password',
+                  'name'
+        )
+        extra_kwargs = {'password': 
+            {'write_only': True, 
+             'min_length': 5}
+        }
+        
+    # Será chamado após a validação, quando for bem sucedida.    
+        def create(self, validated_data):
+            return get_user_model().objects.create_user(**validated_data)
 
 class TasksSerializer(serializers.ModelSerializer):
     

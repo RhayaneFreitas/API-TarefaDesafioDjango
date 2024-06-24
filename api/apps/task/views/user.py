@@ -3,8 +3,10 @@ from rest_framework.response import Response
 from rest_framework.renderers import JSONRenderer
 from django.http import HttpResponse
 from django.utils import timezone
+from rest_framework import generics
 from api.apps.task.serializers.user import (
     TasksSerializer,
+    UserSerializer,
     ActiviteByUserSerializer,
     UserLateTasksSerializer,
     UserCreatedAndFinishedTasksSerializer,
@@ -34,6 +36,9 @@ from django.db.models import (
 from django.db.models.aggregates import (
     Count,
     )
+
+class CreateUserView(generics.CreateAPIView):
+    serializer_class = UserSerializer
 
 class TaskView(APIView):
     permission_classes = [permissions.IsAuthenticated]

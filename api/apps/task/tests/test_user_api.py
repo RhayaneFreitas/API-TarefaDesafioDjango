@@ -5,7 +5,7 @@ from django.urls import reverse
 from rest_framework.test import APIClient
 from rest_framework import status
 
-
+# Testes Realizados nos usuários.
 CREATE_USER_URL = reverse('create-user')
 
 def create_user(**params): 
